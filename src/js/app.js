@@ -1,0 +1,187 @@
+/* Agency OS — application shell: sidebar, router, header, global events, appearance. */
+(function (g) {
+  const AOS = g.AOS;
+  const { $, esc, ic, toast } = AOS;
+  const S = AOS.S, me = AOS.me, status = AOS.status;
+  let view = 'dashboard';
+  AOS.currentView = () => view;
+
+  /* ---------- names & visibility ---------- */
+  AOS.modName = p => ((S.settings.moduleNames || {})[p.k] || p.l);
+  AOS.navItem = k => AOS.NAV_FLAT.find(n => n.k === k);
+  AOS.modOn = k => { const p = AOS.navItem(k); return !!p && AOS.navVisible(p); };
+  AOS.navVisible = function (p) {
+    const r = me.role; if (!r) return false;
+    if (!p.k.startsWith('param-')) return !AOS.isHidden(S.settings, p) && AOS.can(r, p.k, 'r');
+    if (p.perm === 'self') return true;
+    if (p.perm === 'parametres') return AOS.can(r, 'parametres', 'r');
+    return AOS.flag(r, p.perm);
+  };
+
+  /* ---------- appearance (per user) ---------- */
+  /* appearance lives in ui/appearance.js */
+
+  /* ---------- sidebar ---------- */
+  function navBtn(p, extra = '') {
+    const fav = (S.prefs.favorites || []).includes(p.k);
+    return `<button class="nav ${view === p.k ? 'on' : ''} ${p.view ? '' : 'soon'}" data-nav="${p.k}" title="${esc(AOS.modName(p))}">${ic(p.i)}<span class="lbl-t">${esc(AOS.modName(p))}</span>${extra || (p.view ? '' : '<span class="ph">Bientôt</span>')}${fav && !extra ? '' : ''}</button>`;
+  }
+  function counters() {
+    const t = AOS.today(), L = AOS.lists();
+    const open = S.tasks.filter(x => AOS.kindOf(L, 'taskStatus', x.status) !== 'done');
+    const urgent = open.filter(x => x.due && x.due <= t).length;
+    return {
+      taches: urgent ? `<span class="badge">${urgent}</span>` : `<span class="cnt">${open.length}</span>`,
+      planning: (n => n ? `<span class="badge">${n}</span>` : '')(S.events.filter(e => e.date === t).length),
+      creatrices: `<span class="cnt">${S.creators.length}</span>`,
+      equipe: `<span class="cnt">${S.team.filter(m => !m.archived).length}</span>`,
+      organigramme: `<span class="cnt">${S.team.filter(m => !m.archived && AOS.kindOf(L, 'availability', m.avail) === 'available').length}/${S.team.filter(m => !m.archived).length}</span>`,
+      sop: `<span class="cnt">${S.notes.length}</span>`,
+      notifications: (n => n ? `<span class="badge">${n}</span>` : '')(AOS.notifUnread ? AOS.notifUnread() : 0),
+      recrutement: (n => `<span class="cnt">${n}</span>`)(S.creators.filter(c => AOS.kindOf(L, 'stages', c.stage) === 'recruiting').length)
+    };
+  }
+  function renderSide() {
+    const P = S.prefs, cnt = counters(), coll = P.collapsed || {};
+    const favs = (P.favorites || []).map(AOS.navItem).filter(p => p && AOS.navVisible(p));
+    const roleTxt = me.local ? 'Mode local' : (me.role ? me.role.name : '');
+    $('#side').innerHTML = `
+    <div class="brand">${AOS.logoHtml()}<div class="bt"><b>${esc(AOS.appName())}</b><small>${esc(S.settings.name || 'Mon agence')}</small></div>
+      <button class="iconbtn" data-a="mini" aria-label="${P.sideMini ? 'Déplier' : 'Replier'} la barre latérale" title="${P.sideMini ? 'Déplier' : 'Replier'}">${ic('side', 16)}</button></div>
+    <button class="searchbtn" data-a="search">${ic('search', 15)}<span class="lbl-t">Rechercher</span><kbd>⌘K</kbd></button>
+    <nav class="navs" aria-label="Navigation principale">
+    ${favs.length ? `<div class="navsec"><h6><span>Favoris</span></h6>${favs.map(p => navBtn(p, cnt[p.k])).join('')}</div>` : ''}
+    ${AOS.NAV.map(sec => {
+      const items = sec.items.filter(AOS.navVisible); if (!items.length) return '';
+      const c = !!coll[sec.sec];
+      return `<div class="navsec ${c ? 'closed' : ''}"><h6><button data-a="togglesec" data-sec="${esc(sec.sec)}" aria-expanded="${!c}">${ic('down', 12)}<span>${esc(sec.sec)}</span></button></h6>${c ? '' : items.map(p => navBtn(p, cnt[p.k])).join('')}</div>`;
+    }).join('')}
+    </nav>
+    <div class="side-foot"><div class="row" id="syncst"></div>
+      <div class="row muted"><span class="lbl-t">${esc(roleTxt)}${me.role && !me.role.locked && !me.role.assigned && !me.local ? ' · non configuré' : ''}</span></div></div>`;
+    AOS.renderStatus();
+  }
+  AOS.renderStatus = function () {
+    const el = $('#syncst'); if (!el) return;
+    let c = 'ok', t = 'Synchronisé';
+    if (status.mode === 'local') { c = 'warn'; t = 'Enregistré sur cet appareil uniquement'; }
+    else if (status.mode === 'starting' || !status.loaded) { c = 'faint'; t = 'Chargement…'; }
+    else if (status.error) { c = 'bad'; t = status.error; }
+    else if (status.pending) { c = 'info'; t = 'Enregistrement…'; }
+    else if (status.fromCache) { c = 'warn'; t = 'Connexion au serveur…'; }
+    el.innerHTML = `${AOS.dot(AOS.col(c))}<span class="lbl-t">${esc(t)}</span>`;
+  };
+
+  /* ---------- page header ---------- */
+  AOS.header = function ({ eyebrow, title, actions, key, bare }) {
+    const k = key || view, favs = S.prefs.favorites || [], isFav = favs.includes(k);
+    const demo = AOS.BACKUP_COLS.some(c => (S[c] || []).some(r => r.demo));
+    return `<div class="topbar"><button class="btn sm" data-a="menu" aria-label="Menu">${ic('menu')}</button><b>${esc(AOS.appName())}</b><button class="btn sm ghost" data-a="search" style="margin-left:auto" aria-label="Rechercher">${ic('search')}</button></div>
+    ${demo ? `<div class="banner">${ic('star', 15)}<span><b>Mode démonstration</b> : les fiches marquées « exemple » sont fictives.</span>${AOS.flag(me.role, 'users_manage') ? '<button class="btn sm" data-a="cleardemo">Effacer les exemples</button>' : ''}</div>` : ''}
+    ${me.role && !me.role.locked && !me.role.assigned && !me.local && status.loaded ? `<div class="banner info">${ic('shield', 15)}<span>Ton accès n'est pas encore configuré : tu as le rôle <b>Invité</b>. Demande au propriétaire de t'attribuer un rôle dans Paramètres › Utilisateurs.</span></div>` : ''}
+    ${status.readOnly ? `<div class="banner info">${ic('lock', 15)}<span>Lecture seule : connecte-toi à claude.ai pour modifier.</span></div>` : ''}
+    ${bare ? '' : `<div class="head"><div class="ht"><div class="eyebrow">${eyebrow || ''}</div><h1>${title}</h1></div>
+    <div class="actions">${AOS.navItem(k) ? `<button class="iconbtn fav ${isFav ? 'on' : ''}" data-a="fav" data-k="${k}" aria-pressed="${isFav}" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${ic('star', 16)}</button>` : ''}${actions || ''}</div></div>`}`;
+  };
+  AOS.newBtn = (col, label, pri, extra = '') => AOS.allowed(col, 'c') ? `<button class="btn ${pri ? 'pri' : ''}" data-new="${col}" ${extra}>${ic('plus', 15)}${label}</button>` : '';
+
+  /* ---------- views that are not built yet ---------- */
+  function placeholder(p) {
+    return AOS.header({ eyebrow: esc(p.sec), title: esc(AOS.modName(p)) }) +
+      `<div class="card"><div class="empty big"><span class="pill" style="--c:var(--warn)">Phase ${p.phase} · pas encore disponible</span>
+      <h3>Ce module n'est pas encore construit</h3><p>${esc(p.about || '')}</p><p class="faint">Aucune donnée n'est simulée ici. Le détail est dans la feuille de route (ROADMAP.md).</p></div></div>`;
+  }
+  function denied(p) {
+    return AOS.header({ eyebrow: 'Accès', title: 'Accès refusé' }) + `<div class="card"><div class="empty big">${ic('lock', 22)}<h3>Ton rôle ne donne pas accès à « ${esc(p ? AOS.modName(p) : 'cette page')} »</h3><p>Demande à un administrateur de modifier ton rôle dans Paramètres › Permissions.</p></div></div>`;
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    AOS.applyAppearance();
+    const app = $('.app'); app.classList.toggle('mini', !!S.prefs.sideMini);
+    const act = document.activeElement, fid = act && act.id && act.closest('#view') ? act.id : null, pos = fid && act.selectionStart;
+    /* keep text the person is typing when data changes underneath (another device, a snapshot) */
+    const keyOf = el => el.id || (el.form && el.form.id && el.name ? el.form.id + ':' + el.name : '');
+    const drafts = {};
+    document.querySelectorAll('#view input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), #view textarea').forEach(el => { const k = keyOf(el); if (k && el.value !== el.defaultValue) drafts[k] = el.value; });
+    renderSide();
+    const p = AOS.navItem(view);
+    let html;
+    if (!status.loaded) html = AOS.header({ eyebrow: 'Chargement…', title: 'Ouverture de ton espace…' });
+    else if (p && AOS.isHidden(S.settings, p) && !p.k.startsWith('param-')) html = AOS.header({ eyebrow: esc(p.sec), title: esc(AOS.modName(p)) }) + `<div class="card"><div class="empty big">${ic('layers', 22)}<h3>Module masqué</h3><p>Ce module est masqué pour toute l'agence. Ses données sont conservées.</p>${AOS.can(me.role, 'parametres', 'u') ? '<button class="btn" data-nav="param-perso">Réafficher dans Personnalisation</button>' : ''}</div></div>`;
+    else if (!p || !AOS.navVisible(p)) html = denied(p);
+    else if (!p.view) html = placeholder(p);
+    else { try { html = AOS.views[view](); } catch (e) { console.error(e); html = AOS.header({ title: 'Erreur d\'affichage' }) + `<div class="card"><div class="empty big">Cette page a rencontré une erreur : ${esc(e.message)}. Tes données ne sont pas touchées.</div></div>`; } }
+    $('#view').innerHTML = html;
+    AOS.renderDrawer();
+    document.querySelectorAll('#view input, #view textarea').forEach(el => { const k = keyOf(el); if (k in drafts && el.value === el.defaultValue) el.value = drafts[k]; });
+    if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) { } } }
+    if (AOS.afterRender[view]) AOS.afterRender[view]();
+  }
+  AOS.render = render;
+  function route() {
+    const h = location.hash.slice(1);
+    const legacy = { accueil: 'dashboard', pipeline: 'creatrices', agenda: 'planning', notes: 'sop' };
+    view = AOS.navItem(h) ? h : (legacy[h] || 'dashboard');
+    $('#side').classList.remove('open');
+    AOS.routeHooks.forEach(f => f(view));
+    render(); g.scrollTo(0, 0);
+  }
+
+  /* ---------- global events ---------- */
+  Object.assign(AOS.act, {
+    search: () => AOS.openSearch(),
+    menu: () => $('#side').classList.toggle('open'),
+    mini: () => AOS.savePrefs({ sideMini: !S.prefs.sideMini }),
+    togglesec: el => { const c = { ...(S.prefs.collapsed || {}) }; c[el.dataset.sec] = !c[el.dataset.sec]; AOS.savePrefs({ collapsed: c }); },
+    fav: el => { const k = el.dataset.k, f = S.prefs.favorites || []; AOS.savePrefs({ favorites: f.includes(k) ? f.filter(x => x !== k) : [...f, k] }); toast(f.includes(k) ? 'Retiré des favoris' : 'Ajouté aux favoris'); },
+    closeform: () => AOS.closeForm(),
+    closedrawer: () => AOS.closeDrawer(),
+    delrec: async el => {
+      const { col, id } = el.dataset, r = S[col].find(x => x.id === id);
+      const ok = await AOS.confirm({ title: 'Supprimer cette fiche ?', body: `« ${esc(r && (r.name || r.title || r.label))} » sera supprimée. Elle reste récupérable depuis une sauvegarde.${col === 'finances' && r && r.recurrence && r.recurrence !== 'Aucune' ? ' Elle ne sera plus recopiée chaque mois ; les copies déjà créées restent.' : ''}`, ok: 'Supprimer', danger: 1 });
+      if (!ok) return;
+      if (await AOS.remove(col, id)) { AOS.closeForm(); if (AOS.drawerState() && AOS.drawerState().id === id) AOS.closeDrawer(); toast('Supprimé'); }
+    },
+    cleardemo: async () => {
+      const ops = AOS.demoOps();
+      const ok = await AOS.confirm({ title: 'Effacer les données d\'exemple ?', body: `${ops.length} fiches marquées « exemple » seront supprimées. Tes propres fiches ne sont pas touchées.`, ok: 'Effacer les exemples', danger: 1 });
+      if (!ok) return;
+      if (AOS.db()) { try { await AOS.backup.createSnapshot('avant effacement des exemples'); } catch (e) { toast('Sauvegarde de sécurité impossible : rien n\'a été effacé.', 'bad'); return; } }
+      const res = await AOS.applyOps(ops);
+      AOS.audit({ act: 'delete', label: `Exemples effacés (${res.ok})` });
+      toast(`${res.ok} fiches d'exemple supprimées.`);
+    }
+  });
+  document.addEventListener('click', async e => {
+    if (e.target.closest('a[href]')) return;   // real links (Drive, external) open normally
+    const T = e.target.closest('[data-copy],[data-a],[data-new],[data-edit],[data-open],[data-hit],[data-nav],[data-scrim]');
+    if (!T) return; const d = T.dataset;
+    if (d.scrim !== undefined) { if (e.target === T) T.remove(); return; }
+    if (d.copy !== undefined) {
+      e.stopPropagation();
+      try { await navigator.clipboard.writeText(d.copy); toast('Copié : ' + d.copy); }
+      catch (_) { const r = document.createRange(); r.selectNodeContents(T.previousElementSibling); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Texte sélectionné : fais Ctrl+C'); }
+      return;
+    }
+    if (d.a) { if (AOS.act[d.a]) { e.stopPropagation(); AOS.act[d.a](T, e); } return; }
+    if (d.new) { const p = {}; for (const [k, v] of Object.entries(d)) if (k.startsWith('preset')) p[k[6].toLowerCase() + k.slice(7)] = v; AOS.openForm(d.new, null, p); return; }
+    if (d.edit) { const [c, i] = d.edit.split(':'); AOS.openForm(c, i); return; }
+    if (d.open) { const [c, i] = d.open.split(':'); AOS.openRecord(c, i); return; }
+    if (d.hit) { $('#layer [data-scrim="search"]')?.remove(); const [c, i] = d.hit.split(':'); if (c === 'page') location.hash = i; else AOS.openRecord(c, i); return; }
+    if (d.nav) { AOS.closeDrawer(); if (location.hash === '#' + d.nav) route(); else location.hash = d.nav; }
+  });
+  document.addEventListener('input', e => { const f = AOS.inputs[e.target.id]; if (f) f(e.target); });
+  document.addEventListener('change', e => { const f = AOS.changes[e.target.id] || AOS.changes[e.target.name]; if (f) f(e.target); });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); AOS.openSearch(); }
+    if (e.key === 'Escape') { const s = [...document.querySelectorAll('#layer .scrim')].pop(); if (s) s.remove(); else if (AOS.drawerState()) AOS.closeDrawer(); }
+    if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-open][tabindex]')) e.target.click();
+  });
+  g.addEventListener('hashchange', route);
+
+  /* ---------- boot ---------- */
+  AOS.onChange(() => render());
+  route();
+  AOS.initStore();
+})(window);
