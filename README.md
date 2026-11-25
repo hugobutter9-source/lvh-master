@@ -17,7 +17,9 @@ exportée depuis l'ancien outil s'importe ici (Paramètres › Import / export).
 - **Accompagnement** : nombre de personnes, « ensemble depuis », rythme des calls, paiements encaissés un
   par un, prochaine échéance et alerte quand elle est dépassée.
 
-- **Noir et blanc par défaut** : la couleur ne sert qu'aux pastilles et aux étiquettes de statut. Les autres
+- **Noir et blanc par défaut**, à plat, dans l'esprit d'une app de trading : noir pur, gros chiffres, boutons
+  blancs, et une courbe du CA des 6 derniers mois sur le dashboard (on la parcourt au survol). La couleur ne sert
+  qu'aux pastilles, aux étiquettes de statut et aux hausses / baisses. Les autres
   thèmes restent dans Paramètres › Apparence.
 - **Menu court** : Ma journée, Notifications, Drive, Dépenses et Analytics sont masqués par défaut (à réafficher
   dans Paramètres › Personnalisation). Les réglages sont derrière un seul bouton « Paramètres ».

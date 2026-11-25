@@ -116,11 +116,29 @@
 
     /* one row of figures */
     const mk = t.slice(0, 7), rev = AOS.fin.rev(S, mk), prev = AOS.fin.rev(S, shiftMonth(mk, -1)), delta = prev ? Math.round((rev - prev) / prev * 100) : null;
+    /* revenue of the last 6 months: the headline follows the pointer along the line */
+    const serie = canFin ? AOS.monthlySeries(S, [-5, -4, -3, -2, -1, 0].map(n => shiftMonth(mk, n))) : [];
+    const finOn = serie.some(x => x.rev > 0);
+    finPts = finOn ? serie.map(x => ({ k: x.k, v: x.rev })) : null;
+    const finCard = (() => {
+      if (!finOn) return '';
+      const max = Math.max(...serie.map(x => x.rev)) || 1, n = serie.length;
+      const X = i => i / (n - 1) * 100, Y = v => 100 - v / max * 88;   // zero baseline, a little air on top
+      const pts = serie.map((x, i) => `${X(i).toFixed(2)},${Y(x.rev).toFixed(2)}`);
+      const mName = k => new Date(k + '-15T12:00').toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+      return `<section class="card fin" aria-label="Chiffre d'affaires des 6 derniers mois">
+        <div class="fin-top"><span class="fin-l" id="finL">CA du mois</span><b class="fin-n" id="finN">${eur(rev)}</b>
+          <span class="fin-d ${delta === null ? '' : delta >= 0 ? 'up' : 'down'}" id="finD">${delta === null ? 'Pas de mois précédent pour comparer' : `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} % · vs ${monthLabel(shiftMonth(mk, -1)).split(' ')[0]}`}</span></div>
+        <div class="fin-plot" id="finPlot" tabindex="0" role="img" aria-label="${serie.map(x => `${monthLabel(x.k)} : ${eur(x.rev)}`).join(', ')}">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="fin-area" d="M0,100 L${pts.join(' L')} L100,100 Z"/><line class="fin-base" x1="0" y1="100" x2="100" y2="100"/><path class="fin-line" d="M${pts.join(' L')}"/></svg>
+          <i class="fin-cross" id="finCross" hidden></i><i class="fin-dot" id="finDot" style="left:${X(n - 1)}%;top:${Y(serie[n - 1].rev)}%"></i></div>
+        <div class="fin-x">${serie.map((x, i) => `<span data-i="${i}" class="${i === n - 1 ? 'on' : ''}">${esc(mName(x.k))}</span>`).join('')}</div></section>`;
+    })();
     const stat = (v, l, sub = '', nav = '') => `<div class="st ${nav ? 'click' : ''}" ${nav ? `data-nav="${nav}"` : ''}><b>${v}</b><span>${l}</span>${sub ? `<small class="sub2">${sub}</small>` : ''}</div>`;
     const coachOn = AOS.modOn('accompagnement'), actSt = S.students.filter(x => AOS.kindOf(L, 'studentStages', x.stage) === 'active');
     const heads = actSt.reduce((n, x) => n + Math.max(1, Math.round(+x.people || 1)), 0), dueSt = S.students.reduce((n, x) => n + AOS.studentRest(x), 0);
     const stats = `<section class="card stats">
-      ${canFin ? stat(eurK(rev), 'CA du mois', `commission ${eurK(AOS.fin.com(S, mk))}${delta === null ? '' : ` · <i class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta} %</i>`}`, 'finances') : stat(ot.length, 'tâches ouvertes', '', 'taches')}
+      ${canFin && finOn ? stat(eurK(AOS.fin.com(S, mk)), 'commission agence', `résultat net ${eurK(AOS.fin.com(S, mk) - AOS.fin.exp(S, mk))}`, 'finances') : canFin ? stat(eurK(rev), 'CA du mois', `commission ${eurK(AOS.fin.com(S, mk))}`, 'finances') : stat(ot.length, 'tâches ouvertes', '', 'taches')}
       ${stat(active.length, `créatrice${active.length > 1 ? 's' : ''} active${active.length > 1 ? 's' : ''}`, team.length ? `équipe : ${team.filter(m => kindA(m) === 'available').length}/${team.length} disponible${team.filter(m => kindA(m) === 'available').length > 1 ? 's' : ''}` : '', 'creatrices')}
       ${coachOn ? stat(actSt.length, `accompagnement${actSt.length > 1 ? 's' : ''} en cours`, `${heads} personne${heads > 1 ? 's' : ''}`, 'accompagnement') : stat(later.length + evToday.length, 'événements sur 7 jours', '', 'planning')}
       ${coachOn && canFin ? stat(`<i class="${dueSt ? 'warn-t' : ''}">${eurK(dueSt)}</i>`, 'reste à encaisser', 'accompagnements', 'accompagnement') : stat(ot.length, 'tâches ouvertes', '', 'taches')}</section>`;
@@ -138,9 +156,31 @@
       (empty ? `<section class="card box"><div class="box-empty"><p><b>Bienvenue !</b> Ajoute ton équipe et tes créatrices pour commencer.</p><div class="actions center">${AOS.newBtn('team', 'Ajouter un collaborateur')}${AOS.newBtn('creators', 'Ajouter une créatrice', 1)}</div></div></section>` : '') +
       `<div class="dash-top">${hero}${goalsBox}</div>
       <div class="grid g2 top">${planning}${tasks}</div>
-      ${attnBox}${portalBox}${stats}`;
+      ${attnBox}${finCard}${stats}${portalBox}`;
   };
+  let finPts = null;
+  function wireFin() {
+    const plot = document.getElementById('finPlot'); if (!plot || !finPts) return;
+    const n = finPts.length, max = Math.max(...finPts.map(p => p.v)) || 1, last = n - 1;
+    const N = document.getElementById('finN'), Lb = document.getElementById('finL'), D = document.getElementById('finD'), dot = document.getElementById('finDot'), cross = document.getElementById('finCross');
+    const rest = { l: Lb.textContent, d: D.textContent, c: D.className };
+    let cur = last;
+    const show = (i, live) => {
+      cur = i; const p = finPts[i];
+      dot.style.left = cross.style.left = (i / (n - 1) * 100) + '%'; dot.style.top = (100 - p.v / max * 88) + '%';
+      cross.hidden = !live; N.textContent = eur(p.v);
+      document.querySelectorAll('.fin-x span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
+      if (live && i !== last) { Lb.textContent = 'CA · ' + monthLabel(p.k); const prev = i ? finPts[i - 1].v : 0, dl = prev ? Math.round((p.v - prev) / prev * 100) : null;
+        D.textContent = dl === null ? ' ' : `${dl >= 0 ? '▲' : '▼'} ${Math.abs(dl)} % · vs mois précédent`; D.className = 'fin-d ' + (dl === null ? '' : dl >= 0 ? 'up' : 'down'); }
+      else { Lb.textContent = rest.l; D.textContent = rest.d; D.className = rest.c; }
+    };
+    const at = e => { const r = plot.getBoundingClientRect(); return Math.max(0, Math.min(last, Math.round((e.clientX - r.left) / r.width * last))); };
+    plot.onpointermove = e => show(at(e), true);
+    plot.onpointerleave = plot.onblur = () => show(last, false);
+    plot.onkeydown = e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); show(Math.max(0, Math.min(last, cur + (e.key === 'ArrowLeft' ? -1 : 1))), true); } };
+  }
   AOS.afterRender.dashboard = () => {
+    wireFin();
     if (AOS.startClock && document.getElementById('flipH')) AOS.startClock();
     const f = document.getElementById('quickTask'); if (!f) return;
     f.onsubmit = async e => {

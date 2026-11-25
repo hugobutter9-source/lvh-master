@@ -4,10 +4,10 @@
   const { esc, ic, toast } = AOS;
   const S = AOS.S;
 
-  const COLORS = { white: '#f4f6f8', pink: '#f472b6', violet: '#a78bfa', blue: '#5b9cf6', cyan: '#22c8dc', green: '#34d399', yellow: '#fbbf24', orange: '#fb923c', red: '#f87171' };
+  const COLORS = { white: '#ffffff', pink: '#f472b6', violet: '#a78bfa', blue: '#5b9cf6', cyan: '#22c8dc', green: '#34d399', yellow: '#fbbf24', orange: '#fb923c', red: '#f87171' };
   const LEGACY = { teal: 'green', sky: 'blue', rose: 'pink' };
   const BGS = {
-    black: { l: 'Noir', bg: '#040506', bg2: '#08090b', panel: '#0e0f12', panel2: '#15171b' },
+    black: { l: 'Noir', bg: '#000000', bg2: '#0a0a0b', panel: '#111113', panel2: '#1c1c1f' },
     graphite: { l: 'Graphite', bg: '#0b0d10', bg2: '#101318', panel: '#14181e', panel2: '#1b2027' },
     night: { l: 'Bleu nuit', bg: '#060a14', bg2: '#0a1020', panel: '#0f172a', panel2: '#162036' },
     aubergine: { l: 'Aubergine', bg: '#0d0710', bg2: '#140b19', panel: '#1a1020', panel2: '#23162b' },
@@ -50,7 +50,7 @@
     const light = root.dataset.theme ? root.dataset.theme === 'light' : !!(mq && mq.matches);
     /* colours: buttons and badges; a light accent gets dark ink, and is darkened on a light background */
     let a = hex(p.accent), b = hex(p.badge);
-    if (light) { if (lum(a) > .35) a = mix(a, '#000000', lum(a) > .8 ? .78 : .38); if (lum(b) > .35) b = mix(b, '#000000', lum(b) > .8 ? .78 : .38); }
+    if (light) { if (lum(a) > .35) a = mix(a, '#000000', lum(a) > .8 ? 1 : .38); if (lum(b) > .35) b = mix(b, '#000000', lum(b) > .8 ? 1 : .38); }
     st.setProperty('--accent', a); st.setProperty('--accent-ink', lum(a) > .45 ? '#0a0c0f' : '#ffffff');
     st.setProperty('--badge', b); st.setProperty('--badge-ink', lum(b) > .45 ? '#0a0c0f' : '#ffffff');
     st.setProperty('--glow', light || !(+p.ambI > 0) ? 'transparent' : a + '17');

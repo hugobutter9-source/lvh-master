@@ -1,11 +1,11 @@
 /* Agency OS — design tokens and components.
    Layout: collapsible sidebar + scrolling workspace. Dark-first, black and white: colour is kept for status dots and pills only. */
 :root{
-  --bg:#040506; --bg-2:#08090b; --panel:#0e0f12; --panel-2:#15171b; --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
-  --fg:#f2f3f4; --muted:#9a9fa6; --faint:#62676e;
-  --card:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)) ,#0e0f12;
-  --accent:#f4f6f8; --accent-ink:#0a0c0f; --glow:transparent;
-  --ok:#3fcf8e; --warn:#f3b44a; --bad:#f1626f; --info:#5aa9f7; --violet:#a78bfa; --pink:#f472b6;
+  --bg:#000000; --bg-2:#0a0a0b; --panel:#111113; --panel-2:#1c1c1f; --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.16);
+  --fg:#ffffff; --muted:#8e8e93; --faint:#5e5e63;
+  --card:#111113;
+  --accent:#ffffff; --accent-ink:#000000; --glow:transparent;
+  --ok:#17d384; --warn:#ffb224; --bad:#ff5a5f; --info:#4c9aff; --violet:#a78bfa; --pink:#f472b6;
   --glass:rgba(18,22,27,.78); --shadow:0 30px 80px rgba(0,0,0,.5); --card-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 18px 40px -24px rgba(0,0,0,.7);
   --av-l:74%;
   --f-ui:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -14,19 +14,19 @@
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --bg:#f5f5f4; --bg-2:#ececeb; --panel:#ffffff; --panel-2:#f3f3f2; --line:#e4e4e2; --line-2:#d0d0cd;
-  --fg:#111213; --muted:#5b5f64; --faint:#93979c;
-  --card:linear-gradient(180deg,#ffffff,#fbfcfd);
-  --accent:#141618; --accent-ink:#ffffff; --glow:transparent;
+  --bg:#ffffff; --bg-2:#f7f7f7; --panel:#f4f4f5; --panel-2:#e9e9eb; --line:#e6e6e8; --line-2:#cfcfd3;
+  --fg:#000000; --muted:#6b6b70; --faint:#9c9ca1;
+  --card:#f4f4f5;
+  --accent:#000000; --accent-ink:#ffffff; --glow:transparent;
   --ok:#13925a; --warn:#b37405; --bad:#d23b49; --info:#2470c2; --violet:#6c4fd6; --pink:#c0367f;
   --glass:rgba(255,255,255,.82); --shadow:0 24px 60px rgba(20,40,60,.16); --card-shadow:0 1px 2px rgba(20,40,60,.04),0 12px 32px -20px rgba(20,40,60,.25);
   --av-l:34%; color-scheme:light;
 }}
 :root[data-theme="light"]{
-  --bg:#f5f5f4; --bg-2:#ececeb; --panel:#ffffff; --panel-2:#f3f3f2; --line:#e4e4e2; --line-2:#d0d0cd;
-  --fg:#111213; --muted:#5b5f64; --faint:#93979c;
-  --card:linear-gradient(180deg,#ffffff,#fbfcfd);
-  --accent:#141618; --accent-ink:#ffffff; --glow:transparent;
+  --bg:#ffffff; --bg-2:#f7f7f7; --panel:#f4f4f5; --panel-2:#e9e9eb; --line:#e6e6e8; --line-2:#cfcfd3;
+  --fg:#000000; --muted:#6b6b70; --faint:#9c9ca1;
+  --card:#f4f4f5;
+  --accent:#000000; --accent-ink:#ffffff; --glow:transparent;
   --ok:#13925a; --warn:#b37405; --bad:#d23b49; --info:#2470c2; --violet:#6c4fd6; --pink:#c0367f;
   --glass:rgba(255,255,255,.82); --shadow:0 24px 60px rgba(20,40,60,.16); --card-shadow:0 1px 2px rgba(20,40,60,.04),0 12px 32px -20px rgba(20,40,60,.25);
   --av-l:34%; color-scheme:light;
@@ -856,3 +856,63 @@ details.pt-set[open] summary{margin-bottom:12px}
 .stats .st.click{cursor:pointer}
 .stats .st.click:hover{background:color-mix(in srgb,var(--fg) 3%,transparent)}
 .pt-page .row-between>svg{color:var(--faint)}
+
+/* ---------- flat pass, in the spirit of a trading app: pure black, flat surfaces, big bold figures,
+   white pill buttons, one thin line chart. Colour only on status dots, pills and gains / losses. ---------- */
+body{background-image:none}
+h1{font-size:clamp(30px,3.6vw,44px);font-weight:700;letter-spacing:-.04em}
+.card{background:color-mix(in srgb,var(--panel) calc(var(--card-a,1)*100%),transparent);border-color:transparent;box-shadow:none}
+.drawer .card,.modal .card{border-color:var(--line)}
+.hero{background:var(--panel)}
+.hero-n,.stats .st b,.kpi .v,.pay-top b{font-weight:700}
+.side{border-right-color:transparent}
+.nav{font-size:15px;padding:9px 12px}
+.nav.on{background:var(--panel-2);border-color:transparent;font-weight:600}
+.nav.on svg{color:var(--fg)}
+.btn{border-color:transparent;background:var(--panel-2);font-weight:600}
+.btn:hover{border-color:transparent;filter:brightness(1.25)}
+.btn.pri,.btn.glow{background:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover,.btn.glow:hover{filter:brightness(.9)}
+.btn.glow,.btn.glow:hover{box-shadow:none}
+.btn.ghost{background:none}
+.btn.danger{background:none;border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.card .btn:not(.pri):not(.glow):not(.ghost):not(.danger),.pt-strip a.btn{background:color-mix(in srgb,var(--fg) 9%,transparent)}
+.searchbtn,.input,.plusbtn{border-color:transparent;background:var(--panel)}
+.card .input{background:color-mix(in srgb,var(--fg) 7%,transparent)}
+.pill{border-color:transparent;font-weight:600;background:color-mix(in srgb,var(--c,var(--muted)) 16%,transparent)}
+.chip{border-color:transparent;background:var(--panel);font-weight:500}
+.card .chip{background:color-mix(in srgb,var(--fg) 7%,transparent)}
+.chip.on{background:var(--fg);color:var(--bg)}
+.seg{border-color:transparent}
+.hp-bar span{box-shadow:none}
+.box-h h3{font-weight:700}
+.student:hover,.pt-page:hover,.pt-qa:hover{border-color:transparent;transform:none;background:var(--panel-2)}
+.pt-ic{background:color-mix(in srgb,var(--fg) 9%,transparent);color:var(--fg);border-radius:50%}
+.brief-note.hl{background:color-mix(in srgb,var(--fg) 10%,transparent);border-color:transparent}
+.brief-card{border-color:var(--line)}
+.toast{border-radius:999px;font-weight:600;padding:10px 18px}
+/* the clock, flat: plain bold digits instead of split-flap cards */
+.wc-hi{font-weight:700;letter-spacing:-.045em}
+.flip{background:none;box-shadow:none}
+.flip::after,.hinge{display:none}
+.fl{font-family:var(--f-ui);font-weight:700;color:var(--fg);letter-spacing:-.05em;font-size:calc(var(--fh)*.86)}
+.fl-u,.leaf-u,.fl-l,.leaf-l{background:none}
+.leaf{animation-duration:1ms!important;animation-delay:0s!important;opacity:0}
+.fc-colon i{border-radius:50%;box-shadow:none;opacity:1}
+.fc-zone{font-family:var(--f-ui);font-weight:600;font-size:15px;color:var(--faint);text-shadow:none;align-self:flex-end;margin-bottom:calc(var(--fh)*.14)}
+/* revenue: headline figure, change, and one thin line you can scrub */
+.fin{padding:26px 28px 18px;display:flex;flex-direction:column;gap:14px}
+.fin-top{display:flex;flex-direction:column;gap:2px}
+.fin-l{color:var(--muted);font-size:14px}
+.fin-n{font-size:clamp(38px,5vw,56px);font-weight:700;letter-spacing:-.045em;line-height:1.05;font-variant-numeric:tabular-nums}
+.fin-d{font-size:15px;font-weight:600;color:var(--muted)}
+.fin-d.up{color:var(--ok)} .fin-d.down{color:var(--bad)}
+.fin-plot{position:relative;height:150px;touch-action:pan-y;cursor:crosshair}
+.fin-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.fin-line{fill:none;stroke:var(--fg);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.fin-area{fill:color-mix(in srgb,var(--fg) 6%,transparent);stroke:none}
+.fin-base{stroke:var(--line-2);stroke-width:1;vector-effect:non-scaling-stroke}
+.fin-dot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--fg);box-shadow:0 0 0 2px var(--panel);pointer-events:none}
+.fin-cross{position:absolute;top:0;bottom:0;width:1px;background:var(--line-2);pointer-events:none}
+.fin-x{display:flex;justify-content:space-between;font-size:12.5px;color:var(--faint);text-transform:capitalize}
+.fin-x span.on{color:var(--fg)}

@@ -34,6 +34,9 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
     await A.save('calls', { title: 'Camille Test', studentId: sid, type: 'Coaching élève', date: A.addDays(t, 1), time: '15:00', status: st('planned') });
     await A.save('goals', { title: 'Signer 3 créatrices', metric: 'manual', target: 3, current: 1, unit: 'contrats', start: t.slice(0, 8) + '01', end: A.addDays(t, 20), scope: 'Agence', pinned: true });
     await A.save('tasks', { title: 'Envoyer 20-30 DM', status: 'À faire', priority: 'Normale', due: t });
+    const cid = await A.save('creators', { name: 'Jade', stage: 'Active', commission: 40 });
+    const amounts = [5200, 6100, 5800, 7400, 9000, 10350];
+    for (let i = 0; i < 6; i++) await A.save('finances', { label: 'Abonnements', type: 'Revenu', category: 'Abonnements', amount: amounts[i], date: A.shiftMonth(t.slice(0, 7), i - 5) + '-0' + (i === 5 ? 1 : 5), creatorId: cid });
     window.__sid = sid;
   });
   await page.waitForTimeout(200);
@@ -47,6 +50,14 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(/Creator Portal/.test(dash) && await page.locator('#view .pt-strip a[href="https://lvhcontentmanager.netlify.app/requests/new"]').count() === 1, 'dashboard links to the Creator Portal');
   ok(/Paiement de Camille Test attendu/.test(dash), 'dashboard flags the late payment');
   ok(/reste à encaisser/.test(dash), 'dashboard shows what is left to collect');
+  ok(/10[\s  ]350/.test(await page.locator('#finN').innerText()) && /▲ 15 %/.test(await page.locator('#finD').innerText()), 'revenue headline shows this month and the change');
+  await page.locator('#finPlot').scrollIntoViewIfNeeded();
+  const box = await page.locator('#finPlot').boundingBox();
+  await page.mouse.move(box.x + box.width * 0.6, box.y + 40);
+  ok(/7[\s  ]400/.test(await page.locator('#finN').innerText()), 'moving along the line shows that month');
+  await page.mouse.move(box.x + box.width / 2, box.y - 60);
+  ok(/10[\s  ]350/.test(await page.locator('#finN').innerText()), 'leaving the chart restores this month');
+  await page.evaluate(() => window.scrollTo(0, 0));
   await shot('1-dashboard');
 
   /* brief: the last call with notes is the one of 3 days ago (empty) -> falls back to showing it, older ones listed */
@@ -114,7 +125,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   await page.locator('.plusbtn').click(); await page.locator('.quick [data-col="calls"]').click(); await page.waitForSelector('#frm #f-title');
   ok(true, 'the + button opens a new call form'); await page.locator('#frm [data-a="closeform"]').click();
   const cols = await page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return [cs.getPropertyValue('--accent').trim(), cs.getPropertyValue('--bg').trim()]; });
-  ok(cols[0] === '#f4f6f8' && cols[1] === '#040506', 'default look is black and white');
+  ok(cols[0] === '#ffffff' && cols[1] === '#000000', 'default look is black and white');
 
   /* every page of the menu renders without error */
   const keys = await page.evaluate(() => AOS.NAV_FLAT.filter(p => p.view).map(p => p.k));

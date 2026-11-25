@@ -11,7 +11,7 @@
       <h1 class="wc-hi">${title}</h1>
       <div class="flipclock" role="timer" aria-live="off" aria-label="Heure"><span id="flipTxt" class="sr"></span>
         ${card('flipH')}<span class="fc-colon" aria-hidden="true"><i></i><i></i></span>${card('flipM')}<span class="fc-zone" id="flipZ">${esc(zone())}</span></div>
-      <button class="wc-mood" data-nav="taches"><span class="wc-dot" style="background:${mood.c};box-shadow:0 0 10px ${mood.c}"></span>${esc(mood.t)}</button>
+      <button class="wc-mood" data-nav="taches"><span class="wc-dot" style="background:${mood.c}"></span>${esc(mood.t)}</button>
       <div class="wc-date">${esc(date)}</div></section>`;
   };
 
