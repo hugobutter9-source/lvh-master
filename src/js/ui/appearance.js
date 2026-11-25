@@ -22,13 +22,14 @@
     sunset: { l: 'Sunset', accent: 'orange', badge: 'pink', bg: 'graphite', amb: 'sunset', ambI: 50 },
     gold: { l: 'Or et noir', accent: 'yellow', badge: 'yellow', bg: 'black', amb: 'gold', ambI: 40 },
     forest: { l: 'Forêt', accent: 'green', badge: 'green', bg: 'forest', amb: 'forest', ambI: 45 },
+    mono: { l: 'Noir et blanc (défaut)', accent: 'white', badge: 'green', bg: 'black', amb: 'white', ambI: 0, glass: 'none' },
     minimal: { l: 'Minimal', accent: 'white', badge: 'white', bg: 'graphite', amb: 'white', ambI: 12, glass: 'none' },
-    cyan: { l: 'Agency (défaut)', accent: 'cyan', badge: 'cyan', bg: 'graphite', amb: 'ocean', ambI: 35 }
+    cyan: { l: 'Cyan', accent: 'cyan', badge: 'cyan', bg: 'graphite', amb: 'ocean', ambI: 35 }
   };
-  const DEF = { theme: 'system', accent: 'cyan', badge: 'cyan', bg: 'graphite', amb: 'ocean', ambI: 35, ambMove: true, ambCustom: ['#22c8dc', '#a78bfa', '#f472b6'], clock: true, dense: false, sideMini: false, glass: 'normal', corners: 'round2', size: 'normal', font: 'Geist', appName: '', logo: '' };
+  const DEF = { theme: 'system', accent: 'white', badge: 'green', bg: 'black', amb: 'white', ambI: 0, ambMove: false, ambCustom: ['#22c8dc', '#a78bfa', '#f472b6'], clock: true, dense: false, sideMini: false, glass: 'none', corners: 'round', size: 'normal', font: 'Geist', appName: '', logo: '' };
   AOS.APPEARANCE = { COLORS, BGS, AMB, FONTS, THEMES, DEF };
   const P = () => ({ ...DEF, ...(S.prefs || {}) });
-  const hex = v => COLORS[LEGACY[v] || v] || (/^#[0-9a-f]{6}$/i.test(v || '') ? v : COLORS.cyan);
+  const hex = v => COLORS[LEGACY[v] || v] || (/^#[0-9a-f]{6}$/i.test(v || '') ? v : COLORS.white);
   const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   const lum = h => { const [r, gg, b] = rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * gg + .0722 * b; };
   const mix = (h, k, t) => '#' + rgb(h).map((v, i) => Math.round(v * (1 - t) + rgb(k)[i] * t).toString(16).padStart(2, '0')).join('');
@@ -52,7 +53,7 @@
     if (light) { if (lum(a) > .35) a = mix(a, '#000000', lum(a) > .8 ? .78 : .38); if (lum(b) > .35) b = mix(b, '#000000', lum(b) > .8 ? .78 : .38); }
     st.setProperty('--accent', a); st.setProperty('--accent-ink', lum(a) > .45 ? '#0a0c0f' : '#ffffff');
     st.setProperty('--badge', b); st.setProperty('--badge-ink', lum(b) > .45 ? '#0a0c0f' : '#ffffff');
-    st.setProperty('--glow', light ? 'transparent' : a + '17');
+    st.setProperty('--glow', light || !(+p.ambI > 0) ? 'transparent' : a + '17');
     /* background (dark mode only: light mode keeps its own neutrals) */
     const B = BGS[p.bg] || BGS.graphite;
     for (const [k, v] of [['--bg', B.bg], ['--bg-2', B.bg2], ['--panel', B.panel], ['--panel-2', B.panel2]]) light ? st.removeProperty(k) : st.setProperty(k, v);
@@ -60,7 +61,7 @@
     const G = { none: [1, 0], light: [.9, 8], normal: [.76, 16], strong: [.58, 26] }[p.glass] || [.76, 16];
     st.setProperty('--card-a', String(G[0])); st.setProperty('--blur', G[1] + 'px');
     /* corners */
-    const R = { square: [8, 6], round: [16, 10], round2: [24, 12] }[p.corners] || [24, 12];
+    const R = { square: [8, 6], round: [16, 10], round2: [24, 12] }[p.corners] || [16, 10];
     st.setProperty('--r', R[0] + 'px'); st.setProperty('--r-s', R[1] + 'px'); st.setProperty('--r-btn', p.corners === 'square' ? '8px' : '999px');
     /* text */
     loadFont(p.font); st.setProperty('--f-ui', `"${p.font}",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif`);
@@ -76,7 +77,7 @@
   AOS.appName = () => P().appName || 'LVH Master';
   AOS.logoText = () => (P().logo || AOS.ini(S.settings.name || 'AO')).slice(0, 3);
   /* the app mark (same drawing as brand/logo.svg); custom logo letters replace it */
-  const MARK = '<svg viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="lgm" x1="150" y1="150" x2="362" y2="380" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5eead4"/><stop offset=".5" stop-color="#22c8dc"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="#0c1016"/><path d="M164 378 L256 146 L348 378" fill="none" stroke="url(#lgm)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="256" cy="304" rx="104" ry="30" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="12" transform="rotate(-14 256 304)"/><circle cx="256" cy="304" r="17" fill="#fff"/></svg>';
+  const MARK = '<svg viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="lgm" x1="150" y1="150" x2="362" y2="380" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#9aa0a6"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="#0b0c0e"/><path d="M164 378 L256 146 L348 378" fill="none" stroke="url(#lgm)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="256" cy="304" rx="104" ry="30" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="12" transform="rotate(-14 256 304)"/><circle cx="256" cy="304" r="17" fill="#fff"/></svg>';
   AOS.logoHtml = () => P().logo ? `<span class="logo">${esc(P().logo.slice(0, 3))}</span>` : `<span class="logo mark">${MARK}</span>`;
 
   /* ---------- Apparence page ---------- */
@@ -119,7 +120,7 @@
   Object.assign(AOS.act, {
     ap: el => AOS.savePrefs({ [el.dataset.k]: val(el.dataset.v) }),
     apfont: el => AOS.savePrefs({ font: el.dataset.v }),
-    aptheme: el => { const { l, ...t } = THEMES[el.dataset.v]; AOS.savePrefs({ glass: DEF.glass, ...t }); toast(`Thème ${l} appliqué`); },
+    aptheme: el => { const { l, ...t } = THEMES[el.dataset.v]; AOS.savePrefs({ glass: 'normal', ...t }); toast(`Thème ${l} appliqué`); },
     apreset: async () => { if (!(await AOS.confirm({ title: 'Tout réinitialiser ?', body: 'Ton apparence revient aux réglages par défaut. Tes favoris et ton menu ne changent pas.', ok: 'Réinitialiser' }))) return; AOS.savePrefs({ ...DEF }); }
   });
   const nameT = {};

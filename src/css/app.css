@@ -1,32 +1,32 @@
 /* Agency OS — design tokens and components.
-   Layout: collapsible sidebar + scrolling workspace. Dark-first premium, cyan accent, light glass on cards. */
+   Layout: collapsible sidebar + scrolling workspace. Dark-first, black and white: colour is kept for status dots and pills only. */
 :root{
-  --bg:#08090c; --bg-2:#0d1014; --panel:#14181e; --panel-2:#1b2027; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
-  --fg:#eef2f5; --muted:#9aa5b1; --faint:#606b77;
-  --card:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012)) ,#12161b;
-  --accent:#22c8dc; --accent-ink:#03191c; --glow:rgba(34,200,220,.09);
+  --bg:#040506; --bg-2:#08090b; --panel:#0e0f12; --panel-2:#15171b; --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+  --fg:#f2f3f4; --muted:#9a9fa6; --faint:#62676e;
+  --card:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)) ,#0e0f12;
+  --accent:#f4f6f8; --accent-ink:#0a0c0f; --glow:transparent;
   --ok:#3fcf8e; --warn:#f3b44a; --bad:#f1626f; --info:#5aa9f7; --violet:#a78bfa; --pink:#f472b6;
   --glass:rgba(18,22,27,.78); --shadow:0 30px 80px rgba(0,0,0,.5); --card-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 18px 40px -24px rgba(0,0,0,.7);
   --av-l:74%;
   --f-ui:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --r:24px; --r-s:12px;
+  --r:16px; --r-s:10px;
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --bg:#f2f5f7; --bg-2:#e9eef1; --panel:#ffffff; --panel-2:#f2f5f8; --line:#e2e8ed; --line-2:#cfd8df;
-  --fg:#10171c; --muted:#56646f; --faint:#8f9ca7;
+  --bg:#f5f5f4; --bg-2:#ececeb; --panel:#ffffff; --panel-2:#f3f3f2; --line:#e4e4e2; --line-2:#d0d0cd;
+  --fg:#111213; --muted:#5b5f64; --faint:#93979c;
   --card:linear-gradient(180deg,#ffffff,#fbfcfd);
-  --accent:#0b8fa3; --accent-ink:#ffffff; --glow:rgba(11,143,163,.07);
+  --accent:#141618; --accent-ink:#ffffff; --glow:transparent;
   --ok:#13925a; --warn:#b37405; --bad:#d23b49; --info:#2470c2; --violet:#6c4fd6; --pink:#c0367f;
   --glass:rgba(255,255,255,.82); --shadow:0 24px 60px rgba(20,40,60,.16); --card-shadow:0 1px 2px rgba(20,40,60,.04),0 12px 32px -20px rgba(20,40,60,.25);
   --av-l:34%; color-scheme:light;
 }}
 :root[data-theme="light"]{
-  --bg:#f2f5f7; --bg-2:#e9eef1; --panel:#ffffff; --panel-2:#f2f5f8; --line:#e2e8ed; --line-2:#cfd8df;
-  --fg:#10171c; --muted:#56646f; --faint:#8f9ca7;
+  --bg:#f5f5f4; --bg-2:#ececeb; --panel:#ffffff; --panel-2:#f3f3f2; --line:#e4e4e2; --line-2:#d0d0cd;
+  --fg:#111213; --muted:#5b5f64; --faint:#93979c;
   --card:linear-gradient(180deg,#ffffff,#fbfcfd);
-  --accent:#0b8fa3; --accent-ink:#ffffff; --glow:rgba(11,143,163,.07);
+  --accent:#141618; --accent-ink:#ffffff; --glow:transparent;
   --ok:#13925a; --warn:#b37405; --bad:#d23b49; --info:#2470c2; --violet:#6c4fd6; --pink:#c0367f;
   --glass:rgba(255,255,255,.82); --shadow:0 24px 60px rgba(20,40,60,.16); --card-shadow:0 1px 2px rgba(20,40,60,.04),0 12px 32px -20px rgba(20,40,60,.25);
   --av-l:34%; color-scheme:light;
@@ -53,7 +53,7 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .app{display:grid;grid-template-columns:258px minmax(0,1fr);min-height:100%;transition:grid-template-columns .2s;position:relative;z-index:1}
 
 /* ambient light: three soft blobs behind everything; intensity and colours come from the person's appearance */
-#ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:var(--amb-o,.35)}
+#ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:var(--amb-o,0)}
 #ambient i{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.38}
 #ambient i:nth-child(1){background:var(--amb1,#22c8dc);left:-18vmax;top:-22vmax}
 #ambient i:nth-child(2){background:var(--amb2,#a78bfa);right:-22vmax;top:10vmax;opacity:.28}
@@ -835,3 +835,24 @@ a.line{text-decoration:none;color:inherit}
 .pay-form{display:flex;gap:8px;flex-wrap:wrap}
 .pay-form .input{flex:1;min-width:120px}
 .pay-list{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+
+/* ---------- sober pass: one settings button, quick add, compact portal strip ---------- */
+.side-top{display:flex;gap:8px;align-items:center}
+.side-top .searchbtn{flex:1;min-width:0}
+.plusbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.plusbtn:hover{border-color:var(--faint)}
+.app.mini .side-top{flex-direction:column}
+.side-foot .nav{margin:0 -6px 4px;width:calc(100% + 12px);font-size:14.5px;color:var(--fg)}
+.ptabs{margin-top:-4px}
+.quick{display:flex;flex-direction:column;padding:6px 0 10px}
+.quick .li{border-top:0;padding:13px 20px;font-size:15px}
+.pt-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px}
+.pt-strip .lbl{margin-right:6px}
+.pt-strip a.btn{text-decoration:none;color:inherit}
+.pt-strip .linkbtn{margin-left:auto}
+.st small.sub2{display:block;font-size:12.5px;color:var(--faint)}
+details.pt-set summary{cursor:pointer;color:var(--muted);font-size:13.5px}
+details.pt-set[open] summary{margin-bottom:12px}
+.stats .st.click{cursor:pointer}
+.stats .st.click:hover{background:color-mix(in srgb,var(--fg) 3%,transparent)}
+.pt-page .row-between>svg{color:var(--faint)}

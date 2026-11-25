@@ -64,32 +64,10 @@
     if (canFin && AOS.modOn('accompagnement') && AOS.studentPayLate) S.students.filter(AOS.studentPayLate)
       .forEach(s => attn.push({ c: 'var(--bad)', t: `Paiement de ${s.name} attendu depuis le ${dShort(s.payNext)} (reste ${eur(AOS.studentRest(s))})`, open: 'students:' + s.id }));
 
-    /* calls: what to re-read before the next ones, and the notes still to write */
-    const callsBox = (() => {
-      if (!AOS.modOn('calls')) return '';
-      const soon = sortBy(S.calls.filter(c => AOS.kindOf(L, 'callStatus', c.status) === 'planned' && c.date >= t && c.date <= addDays(t, 7)), c => c.date + (c.time || '')).slice(0, 4);
-      const write = AOS.allowed('calls', 'u') ? AOS.callsToWrite().slice(0, 3) : [];
-      const prep = c => `<div class="line" data-a="callbrief" data-id="${c.id}"><span class="when"><b>${esc(c.time ? c.time.replace(':', 'h') : '—')}</b><small>${c.date === t ? "aujourd'hui" : dShort(c.date)}</small></span>
-        <span class="what"><span class="ttl">${ic('phone', 13)} ${esc(c.title)}</span><span class="sub">${esc(AOS.callLastTxt(c))}</span></span><span class="btn sm">${ic('book', 13)}Brief</span></div>`;
-      return `<section class="card box"><div class="box-h"><span class="lbl">${dot('var(--info)')}Calls à préparer</span><button class="linkbtn" data-nav="calls">Tous</button></div>
-        ${soon.length ? soon.map(prep).join('') : '<div class="box-empty"><p>Aucun call dans les 7 jours.</p></div>'}
-        ${write.length ? `<div class="box-sub">Notes à écrire</div>${write.map(c => `<div class="line" data-a="callwrite" data-id="${c.id}"><span class="when"><b>${+c.date.slice(8)}</b><small>${dShort(c.date).replace(/^\d+\s*/, '')}</small></span><span class="what"><span class="ttl">${esc(c.title)}</span><span class="sub">Call passé, pas encore de notes</span></span><span class="btn sm">${ic('pen', 13)}Écrire</span></div>`).join('')}` : ''}
-        ${AOS.allowed('calls', 'c') ? `<button class="line add" data-new="calls">${ic('plus', 16)}Planifier un call</button>` : ''}</section>`;
-    })();
+    /* calls that happened and have no notes yet: the next brief would be empty */
+    if (AOS.modOn('calls') && AOS.allowed('calls', 'u')) AOS.callsToWrite().slice(0, 3)
+      .forEach(c => attn.push({ c: 'var(--violet)', t: `Notes à écrire : call du ${dShort(c.date)} avec ${c.title}`, a: 'callwrite', id: c.id }));
     const portalBox = AOS.portalBox ? AOS.portalBox() : '';
-
-    /* coaching in one line */
-    const coach = (() => {
-      if (!AOS.modOn('accompagnement') || !S.students.length) return '';
-      const act = S.students.filter(s => AOS.kindOf(L, 'studentStages', s.stage) === 'active');
-      const heads = act.reduce((n, s) => n + Math.max(1, Math.round(+s.people || 1)), 0), due = S.students.reduce((n, s) => n + AOS.studentRest(s), 0);
-      const wk = S.calls.filter(c => c.studentId && AOS.kindOf(L, 'callStatus', c.status) === 'planned' && c.date >= t && c.date <= addDays(t, 7)).length;
-      return `<section class="card stats click" data-nav="accompagnement">
-        <div class="st"><b>${act.length}</b><span>accompagnement${act.length > 1 ? 's' : ''} en cours</span></div>
-        <div class="st"><b>${heads}</b><span>personne${heads > 1 ? 's' : ''} accompagnée${heads > 1 ? 's' : ''}</span></div>
-        <div class="st"><b>${wk}</b><span>call${wk > 1 ? 's' : ''} de coaching sur 7 jours</span></div>
-        ${canFin ? `<div class="st"><b class="${due ? 'warn-t' : ''}">${eurK(due)}</b><span>reste à encaisser</span></div>` : `<div class="st"><b>${S.snotes.length}</b><span>notes de suivi</span></div>`}</section>`;
-    })();
 
     /* hero */
     const hero = `<section class="hero card">
@@ -118,7 +96,7 @@
     })();
 
     /* planning */
-    const evLine = (e, withDate) => { if (e._call) return AOS.callLine(e, withDate); const cr = AOS.nm('creators', e.creatorId); return `<button class="line" data-edit="events:${e.id}"><span class="when"><b>${esc(e.time ? e.time.replace(':', 'h') : 'Journée')}</b>${withDate ? `<small>${dShort(e.date)}</small>` : ''}</span>
+    const evLine = (e, withDate) => { if (e._call) return AOS.callLine(e, withDate, AOS.callLastTxt(e)); const cr = AOS.nm('creators', e.creatorId); return `<button class="line" data-edit="events:${e.id}"><span class="when"><b>${esc(e.time ? e.time.replace(':', 'h') : 'Journée')}</b>${withDate ? `<small>${dShort(e.date)}</small>` : ''}</span>
       <span class="what"><span class="ttl">${esc(e.title)}</span><span class="sub">${[e.type, cr, e.place].filter(Boolean).map(esc).join(' · ')}</span></span>${dot(AOS.colorOf(L, 'eventTypes', e.type))}</button>`; };
     const planning = AOS.modOn('planning') ? `<section class="card box"><div class="box-h"><span class="lbl">${dot('var(--accent)')}Planning du jour</span><button class="linkbtn" data-nav="planning">Agenda</button></div>
       ${evToday.length ? evToday.map(e => evLine(e)).join('') : '<div class="box-empty"><p>Rien de prévu aujourd\'hui.</p></div>'}
@@ -138,15 +116,17 @@
 
     /* one row of figures */
     const mk = t.slice(0, 7), rev = AOS.fin.rev(S, mk), prev = AOS.fin.rev(S, shiftMonth(mk, -1)), delta = prev ? Math.round((rev - prev) / prev * 100) : null;
-    const stat = (v, l, extra = '') => `<div class="st"><b>${v}</b><span>${l}${extra}</span></div>`;
+    const stat = (v, l, sub = '', nav = '') => `<div class="st ${nav ? 'click' : ''}" ${nav ? `data-nav="${nav}"` : ''}><b>${v}</b><span>${l}</span>${sub ? `<small class="sub2">${sub}</small>` : ''}</div>`;
+    const coachOn = AOS.modOn('accompagnement'), actSt = S.students.filter(x => AOS.kindOf(L, 'studentStages', x.stage) === 'active');
+    const heads = actSt.reduce((n, x) => n + Math.max(1, Math.round(+x.people || 1)), 0), dueSt = S.students.reduce((n, x) => n + AOS.studentRest(x), 0);
     const stats = `<section class="card stats">
-      ${canFin ? stat(eurK(rev), 'CA du mois', delta === null ? '' : ` · <i class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta} %</i>`) + stat(eurK(AOS.fin.com(S, mk)), 'commission agence')
-        : stat(ot.length, 'tâches ouvertes') + stat(later.length + evToday.length, 'événements sur 7 jours')}
-      ${stat(active.length, `créatrice${active.length > 1 ? 's' : ''} active${active.length > 1 ? 's' : ''}`)}
-      ${stat(`${team.filter(m => kindA(m) === 'available').length}<small>/${team.length}</small>`, 'équipe disponible')}</section>`;
+      ${canFin ? stat(eurK(rev), 'CA du mois', `commission ${eurK(AOS.fin.com(S, mk))}${delta === null ? '' : ` · <i class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta} %</i>`}`, 'finances') : stat(ot.length, 'tâches ouvertes', '', 'taches')}
+      ${stat(active.length, `créatrice${active.length > 1 ? 's' : ''} active${active.length > 1 ? 's' : ''}`, team.length ? `équipe : ${team.filter(m => kindA(m) === 'available').length}/${team.length} disponible${team.filter(m => kindA(m) === 'available').length > 1 ? 's' : ''}` : '', 'creatrices')}
+      ${coachOn ? stat(actSt.length, `accompagnement${actSt.length > 1 ? 's' : ''} en cours`, `${heads} personne${heads > 1 ? 's' : ''}`, 'accompagnement') : stat(later.length + evToday.length, 'événements sur 7 jours', '', 'planning')}
+      ${coachOn && canFin ? stat(`<i class="${dueSt ? 'warn-t' : ''}">${eurK(dueSt)}</i>`, 'reste à encaisser', 'accompagnements', 'accompagnement') : stat(ot.length, 'tâches ouvertes', '', 'taches')}</section>`;
 
     const attnBox = attn.length ? `<section class="card box"><div class="box-h"><span class="lbl">${dot('var(--warn)')}À surveiller</span></div>
-      ${attn.slice(0, 4).map(a => `<button class="line" data-open="${a.open}">${dot(a.c)}<span class="what"><span class="ttl">${esc(a.t)}</span></span>${ic('chev', 15)}</button>`).join('')}</section>` : '';
+      ${attn.slice(0, 5).map(a => `<button class="line" ${a.a ? `data-a="${a.a}" data-id="${a.id}"` : `data-open="${a.open}"`}>${dot(a.c)}<span class="what"><span class="ttl">${esc(a.t)}</span></span>${ic('chev', 15)}</button>`).join('')}</section>` : '';
 
     const empty = !['creators', 'team', 'tasks', 'events'].some(c => S[c].length);
     const showClock = (S.prefs || {}).clock !== false && AOS.clockHtml;
@@ -158,8 +138,7 @@
       (empty ? `<section class="card box"><div class="box-empty"><p><b>Bienvenue !</b> Ajoute ton équipe et tes créatrices pour commencer.</p><div class="actions center">${AOS.newBtn('team', 'Ajouter un collaborateur')}${AOS.newBtn('creators', 'Ajouter une créatrice', 1)}</div></div></section>` : '') +
       `<div class="dash-top">${hero}${goalsBox}</div>
       <div class="grid g2 top">${planning}${tasks}</div>
-      ${callsBox || portalBox ? `<div class="grid ${callsBox && portalBox ? 'g2' : ''} top">${callsBox}${portalBox}</div>` : ''}
-      ${stats}${coach}${attnBox}`;
+      ${attnBox}${portalBox}${stats}`;
   };
   AOS.afterRender.dashboard = () => {
     if (AOS.startClock && document.getElementById('flipH')) AOS.startClock();

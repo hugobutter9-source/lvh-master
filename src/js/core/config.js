@@ -54,15 +54,16 @@
     studentNoteTags: { label: "Types de note d'élève", colored: 1, uses: [['snotes', 'tag']] }
   };
 
-  /* Navigation. `phase` > 1 and no view = not built yet: shown as unavailable, never simulated. */
+  /* Navigation. `phase` > 1 and no view = not built yet: shown as unavailable, never simulated.
+     `hid` = hidden by default to keep the menu short; shown again from Paramètres > Personnalisation. */
   AOS.NAV = [
     { sec: 'Accueil', items: [
       { k: 'dashboard', l: 'Dashboard', i: 'home', view: 1 },
-      { k: 'ma-journee', l: 'Ma journée', i: 'sun', view: 1 },
+      { k: 'ma-journee', l: 'Ma journée', i: 'sun', view: 1, hid: 1 },
       { k: 'planning', l: 'Agenda', i: 'cal', view: 1 },
       { k: 'taches', l: 'Tâches', i: 'task', view: 1 },
       { k: 'objectifs', l: 'Objectifs', i: 'target', view: 1 },
-      { k: 'notifications', l: 'Notifications', i: 'bell', view: 1 }] },
+      { k: 'notifications', l: 'Notifications', i: 'bell', view: 1, hid: 1 }] },
     { sec: 'Organisation', items: [
       { k: 'organigramme', l: 'Organigramme', i: 'org', view: 1 },
       { k: 'equipe', l: 'Équipe', i: 'users', view: 1 },
@@ -75,14 +76,14 @@
       { k: 'accompagnement', l: 'Accompagnement', i: 'grad', view: 1 },
       { k: 'calls', l: 'Calls', i: 'phone', view: 1 },
       { k: 'scripts', l: 'Scripts', i: 'script', view: 1 },
-      { k: 'drive', l: 'Drive', i: 'drive', view: 1 },
+      { k: 'drive', l: 'Drive', i: 'drive', view: 1, hid: 1 },
       { k: 'recrutement', l: 'Recrutement', i: 'kanban', view: 1, hid: 1 },
       { k: 'marketing', l: 'Marketing', i: 'megaphone', phase: 5, hid: 1, about: 'Comptes sociaux par créatrice, statistiques saisies ou importées, campagnes et comparaisons de périodes.' },
       { k: 'contenu', l: 'Contenu', i: 'film', phase: 5, hid: 1, about: 'Calendrier éditorial, idées, briefs, scripts et suivi de production.' }] },
     { sec: 'Business', items: [
       { k: 'finances', l: 'Finances', i: 'euro', view: 1 },
-      { k: 'depenses', l: 'Dépenses', i: 'receipt', view: 1 },
-      { k: 'analytics', l: 'Analytics', i: 'chart', view: 1 }] },
+      { k: 'depenses', l: 'Dépenses', i: 'receipt', view: 1, hid: 1 },
+      { k: 'analytics', l: 'Analytics', i: 'chart', view: 1, hid: 1 }] },
     { sec: 'Productivité', items: [
       { k: 'sop', l: 'SOP & notes', i: 'book', view: 1, hid: 1 },
       { k: 'documents', l: 'Documents', i: 'file', phase: 5, hid: 1, about: 'Stockage de documents avec accès limité. Le module Drive couvre déjà le dépôt de fichiers.' },

@@ -17,6 +17,12 @@ exportée depuis l'ancien outil s'importe ici (Paramètres › Import / export).
 - **Accompagnement** : nombre de personnes, « ensemble depuis », rythme des calls, paiements encaissés un
   par un, prochaine échéance et alerte quand elle est dépassée.
 
+- **Noir et blanc par défaut** : la couleur ne sert qu'aux pastilles et aux étiquettes de statut. Les autres
+  thèmes restent dans Paramètres › Apparence.
+- **Menu court** : Ma journée, Notifications, Drive, Dépenses et Analytics sont masqués par défaut (à réafficher
+  dans Paramètres › Personnalisation). Les réglages sont derrière un seul bouton « Paramètres ».
+- **Bouton +** (ou touche N) : ajouter une tâche, un call, un événement… depuis n'importe quelle page.
+
 ## Lancer en local
 
 Aucune installation : c'est un site statique.

@@ -25,10 +25,10 @@
     const txt = (last.prep || last.result || '').trim().replace(/\s+/g, ' ');
     return `Dernier call ${dShort(last.date)} : ${txt || 'pas de notes'}`;
   };
-  AOS.callLine = function (c, withDate) {
+  AOS.callLine = function (c, withDate, sub) {
     const L = AOS.lists(), planned = ck(c) === 'planned';
     return `<div class="line" data-edit="calls:${c.id}"><span class="when"><b>${esc(c.time ? c.time.replace(':', 'h') : '—')}</b>${withDate ? `<small>${dShort(c.date)}</small>` : ''}</span>
-      <span class="what"><span class="ttl">${ic('phone', 13)} ${esc(c.title)}${AOS.demoTag(c)}</span><span class="sub">${[c.type, AOS.nm('team', c.ownerId), AOS.nm('creators', c.creatorId)].filter(Boolean).map(esc).join(' · ')}</span></span>
+      <span class="what"><span class="ttl">${ic('phone', 13)} ${esc(c.title)}${AOS.demoTag(c)}</span><span class="sub">${sub ? esc(sub) : [c.type, AOS.nm('team', c.ownerId), AOS.nm('creators', c.creatorId)].filter(Boolean).map(esc).join(' · ')}</span></span>
       ${planned ? `<button class="btn sm" data-a="callbrief" data-id="${c.id}" title="Notes du dernier call et points à aborder">${ic('book', 13)}Brief</button>` : ''}
       ${planned && AOS.allowed('calls', 'u') ? `<button class="btn sm pri" data-a="calldone" data-id="${c.id}">Fait</button>` : pill(c.status, AOS.colorOf(L, 'callStatus', c.status))}</div>`;
   };

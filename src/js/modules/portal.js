@@ -29,21 +29,15 @@
     { p: '/messages', i: 'script', l: 'Messages', s: 'Les conversations avec les modèles.' },
     { p: '/analytics', i: 'chart', l: 'Statistiques', s: 'Production livrée et approuvée dans le temps.' },
     { p: '/assistant', i: 'zap', l: 'Assistant IA', s: 'Idées et briefs générés.' }];
-  const LATER = ['Modèles actives', 'À produire', 'À valider', 'Approuvés cette semaine', 'En retard'];
-
   AOS.views.portal = function () {
     const canSet = AOS.can(me.role, 'parametres', 'u');
     return AOS.header({ eyebrow: 'Agence', title: 'Creator Portal <span class="soft">· la production de contenu.</span>',
-      actions: `<a class="btn pri" href="${to('/overview')}" ${link}>${ic('ext', 15)}Ouvrir le portal</a>` }) +
-    `<div class="pt-quick">${AOS.PORTAL_QUICK.map((q, n) => `<a class="card pt-qa ${n ? '' : 'first'}" href="${to(q.p)}" ${link}><span class="pt-ic">${ic(q.i, 18)}</span><span class="grow"><b>${q.l}</b><small>${q.s}</small></span>${ic('ext', 14)}</a>`).join('')}</div>
-    <section class="card box"><div class="box-h"><span class="lbl">${AOS.dot('var(--faint)')}Chiffres du portal</span><span class="pill" style="--c:var(--warn)">Pas encore relié</span></div>
-      <div class="pt-later">${LATER.map(l => `<div><b>—</b><span>${l}</span></div>`).join('')}</div>
-      <p class="pad-x muted small">Ces chiffres vivent dans le portal. Ils s'afficheront ici, et sur le dashboard, à l'étape suivante : la liaison des données. Pour l'instant chaque bouton ouvre le portal sur la bonne page.</p></section>
-    <h2 class="sh">Toutes les pages</h2>
-    <div class="pt-pages">${PAGES.map(q => `<a class="card pt-page" href="${to(q.p)}" ${link}><span class="pt-ic">${ic(q.i, 18)}</span><b>${q.l}</b><small>${q.s}</small></a>`).join('')}</div>
-    <section class="card pad stack tight"><div class="row-between"><b>Adresse du portal</b><a class="linkbtn mono small" href="${to('')}" ${link}>${esc(host())}</a></div>
-      ${canSet ? `<form class="pt-url" id="portalUrlForm"><input class="input" name="u" type="url" value="${esc(AOS.portalUrl())}" placeholder="${esc(AOS.PORTAL_DEFAULT)}" aria-label="Adresse du portal"><button class="btn sm">Enregistrer</button></form>
-      <p class="faint small" style="margin:0">À changer seulement si le portal déménage (nouveau domaine).</p>` : ''}</section>`;
+      actions: `<a class="btn" href="${to('/overview')}" ${link}>${ic('ext', 15)}Ouvrir le portal</a><a class="btn pri" href="${to('/requests/new')}" ${link}>${ic('plus', 15)}Créer un contenu</a>` }) +
+    `<div class="pt-pages">${PAGES.map(q => `<a class="card pt-page" href="${to(q.p)}" ${link}><span class="row-between"><span class="pt-ic">${ic(q.i, 18)}</span>${ic('ext', 14)}</span><b>${q.l}</b><small>${q.s}</small></a>`).join('')}</div>
+    <p class="faint hint">Chaque carte ouvre le portal sur la bonne page, dans un nouvel onglet. Les chiffres du portal (à produire, à valider, en retard) arriveront ici quand les données seront reliées.</p>
+    ${canSet ? `<details class="pt-set"><summary>Adresse du portal : <span class="mono">${esc(host())}</span></summary>
+      <form class="pt-url" id="portalUrlForm"><input class="input" name="u" type="url" value="${esc(AOS.portalUrl())}" placeholder="${esc(AOS.PORTAL_DEFAULT)}" aria-label="Adresse du portal"><button class="btn sm">Enregistrer</button></form>
+      <p class="faint small">À changer seulement si le portal déménage (nouveau domaine).</p></details>` : ''}`;
   };
   document.addEventListener('submit', async e => {
     const f = e.target; if (f.id !== 'portalUrlForm') return; e.preventDefault();
@@ -52,10 +46,11 @@
     if (await AOS.setDoc('settings/agency', { ...S.settings, portalUrl: u }, 'settings')) toast('Adresse du portal enregistrée');
   });
 
-  /* dashboard block */
+  /* dashboard: one line of shortcuts */
   AOS.portalBox = function () {
     if (!AOS.modOn('portal')) return '';
-    return `<section class="card box"><div class="box-h"><span class="lbl">${AOS.dot('var(--violet)')}Creator Portal</span><button class="linkbtn" data-nav="portal">Tout voir</button></div>
-      ${AOS.PORTAL_QUICK.map(q => `<a class="line" href="${to(q.p)}" ${link}><span class="pt-ic sm">${ic(q.i, 15)}</span><span class="what"><span class="ttl">${q.l}</span><span class="sub">${q.s}</span></span>${ic('ext', 15)}</a>`).join('')}</section>`;
+    return `<section class="card pt-strip"><span class="lbl">${AOS.dot('var(--violet)')}Creator Portal</span>
+      ${AOS.PORTAL_QUICK.map(q => `<a class="btn sm" href="${to(q.p)}" ${link} title="${q.s}">${ic(q.i, 14)}${q.l}</a>`).join('')}
+      <button class="linkbtn" data-nav="portal">Tout voir</button></section>`;
   };
 })();

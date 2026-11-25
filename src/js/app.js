@@ -41,6 +41,10 @@
       recrutement: (n => `<span class="cnt">${n}</span>`)(S.creators.filter(c => AOS.kindOf(L, 'stages', c.stage) === 'recruiting').length)
     };
   }
+  const params = () => AOS.NAV_FLAT.filter(p => p.k.startsWith('param-') && AOS.navVisible(p));
+  /* what can be added from anywhere with the + button */
+  const QUICK = [['tasks', 'taches', 'Tâche', 'task'], ['calls', 'calls', 'Call', 'phone'], ['events', 'planning', 'Événement', 'cal'], ['students', 'accompagnement', 'Accompagnement', 'grad'], ['creators', 'creatrices', 'Créatrice', 'star'], ['finances', 'finances', 'Transaction', 'euro'], ['goals', 'objectifs', 'Objectif', 'target']];
+  const quick = () => QUICK.filter(([col, mod]) => AOS.modOn(mod) && AOS.allowed(col, 'c'));
   function renderSide() {
     const P = S.prefs, cnt = counters(), coll = P.collapsed || {};
     const favs = (P.favorites || []).map(AOS.navItem).filter(p => p && AOS.navVisible(p));
@@ -48,16 +52,17 @@
     $('#side').innerHTML = `
     <div class="brand">${AOS.logoHtml()}<div class="bt"><b>${esc(AOS.appName())}</b><small>${esc(S.settings.name || 'Mon agence')}</small></div>
       <button class="iconbtn" data-a="mini" aria-label="${P.sideMini ? 'Déplier' : 'Replier'} la barre latérale" title="${P.sideMini ? 'Déplier' : 'Replier'}">${ic('side', 16)}</button></div>
-    <button class="searchbtn" data-a="search">${ic('search', 15)}<span class="lbl-t">Rechercher</span><kbd>⌘K</kbd></button>
+    <div class="side-top"><button class="searchbtn" data-a="search">${ic('search', 15)}<span class="lbl-t">Rechercher</span><kbd>⌘K</kbd></button>${quick().length ? `<button class="iconbtn plusbtn" data-a="quicknew" aria-label="Ajouter" title="Ajouter (touche N)">${ic('plus', 17)}</button>` : ''}</div>
     <nav class="navs" aria-label="Navigation principale">
     ${favs.length ? `<div class="navsec"><h6><span>Favoris</span></h6>${favs.map(p => navBtn(p, cnt[p.k])).join('')}</div>` : ''}
     ${AOS.NAV.map(sec => {
+      if (sec.sec === 'Paramètres') return '';   // one button at the bottom, tabs on the page
       const items = sec.items.filter(AOS.navVisible); if (!items.length) return '';
       const c = !!coll[sec.sec];
       return `<div class="navsec ${c ? 'closed' : ''}"><h6><button data-a="togglesec" data-sec="${esc(sec.sec)}" aria-expanded="${!c}">${ic('down', 12)}<span>${esc(sec.sec)}</span></button></h6>${c ? '' : items.map(p => navBtn(p, cnt[p.k])).join('')}</div>`;
     }).join('')}
     </nav>
-    <div class="side-foot"><div class="row" id="syncst"></div>
+    <div class="side-foot">${params()[0] ? `<button class="nav ${view.startsWith('param-') ? 'on' : ''}" data-nav="${params()[0].k}" title="Paramètres">${ic('sliders')}<span class="lbl-t">Paramètres</span></button>` : ''}<div class="row" id="syncst"></div>
       <div class="row muted"><span class="lbl-t">${esc(roleTxt)}${me.role && !me.role.locked && !me.role.assigned && !me.local ? ' · non configuré' : ''}</span></div></div>`;
     AOS.renderStatus();
   }
@@ -81,7 +86,8 @@
     ${me.role && !me.role.locked && !me.role.assigned && !me.local && status.loaded ? `<div class="banner info">${ic('shield', 15)}<span>Ton accès n'est pas encore configuré : tu as le rôle <b>Invité</b>. Demande au propriétaire de t'attribuer un rôle dans Paramètres › Utilisateurs.</span></div>` : ''}
     ${status.readOnly ? `<div class="banner info">${ic('lock', 15)}<span>Lecture seule : connecte-toi à claude.ai pour modifier.</span></div>` : ''}
     ${bare ? '' : `<div class="head"><div class="ht"><div class="eyebrow">${eyebrow || ''}</div><h1>${title}</h1></div>
-    <div class="actions">${AOS.navItem(k) ? `<button class="iconbtn fav ${isFav ? 'on' : ''}" data-a="fav" data-k="${k}" aria-pressed="${isFav}" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${ic('star', 16)}</button>` : ''}${actions || ''}</div></div>`}`;
+    <div class="actions">${AOS.navItem(k) ? `<button class="iconbtn fav ${isFav ? 'on' : ''}" data-a="fav" data-k="${k}" aria-pressed="${isFav}" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${ic('star', 16)}</button>` : ''}${actions || ''}</div></div>`}
+    ${view.startsWith('param-') && params().length > 1 ? `<div class="chips ptabs" role="tablist" aria-label="Paramètres">${params().map(p => `<button class="chip ${view === p.k ? 'on' : ''}" role="tab" aria-selected="${view === p.k}" data-nav="${p.k}">${esc(AOS.modName(p))}</button>`).join('')}</div>` : ''}`;
   };
   AOS.newBtn = (col, label, pri, extra = '') => AOS.allowed(col, 'c') ? `<button class="btn ${pri ? 'pri' : ''}" data-new="${col}" ${extra}>${ic('plus', 15)}${label}</button>` : '';
 
@@ -131,6 +137,14 @@
   /* ---------- global events ---------- */
   Object.assign(AOS.act, {
     search: () => AOS.openSearch(),
+    quicknew: () => {
+      if (document.querySelector('#layer .scrim')) return;
+      document.getElementById('layer').insertAdjacentHTML('beforeend', `<div class="scrim" data-scrim="quick"><div class="modal sm" role="dialog" aria-modal="true" aria-labelledby="quickT"><div class="card-h"><h3 id="quickT">Ajouter</h3><button class="btn sm ghost" data-a="quickclose" aria-label="Fermer">${ic('x')}</button></div>
+        <div class="quick">${quick().map(([col, , l, i]) => `<button class="li click" data-a="quickpick" data-col="${col}">${ic(i, 17)}<span class="grow title">${l}</span>${ic('chev', 14)}</button>`).join('')}</div></div></div>`);
+      document.querySelector('#layer .quick button')?.focus();
+    },
+    quickclose: () => document.querySelector('#layer [data-scrim="quick"]')?.remove(),
+    quickpick: el => { AOS.act.quickclose(); AOS.openForm(el.dataset.col); },
     menu: () => $('#side').classList.toggle('open'),
     mini: () => AOS.savePrefs({ sideMini: !S.prefs.sideMini }),
     togglesec: el => { const c = { ...(S.prefs.collapsed || {}) }; c[el.dataset.sec] = !c[el.dataset.sec]; AOS.savePrefs({ collapsed: c }); },
@@ -175,6 +189,7 @@
   document.addEventListener('change', e => { const f = AOS.changes[e.target.id] || AOS.changes[e.target.name]; if (f) f(e.target); });
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); AOS.openSearch(); }
+    if (e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !e.target.isContentEditable && quick().length) { e.preventDefault(); AOS.act.quicknew(); }
     if (e.key === 'Escape') { const s = [...document.querySelectorAll('#layer .scrim')].pop(); if (s) s.remove(); else if (AOS.drawerState()) AOS.closeDrawer(); }
     if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-open][tabindex]')) e.target.click();
   });

@@ -42,9 +42,9 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(await page.locator('.goalbox .mg').count() === 1, 'dashboard shows the pinned goal');
   ok(/Envoyer 20-30 DM/.test(await page.locator('#view').innerText()), 'dashboard shows today\'s task');
   const dash = await page.locator('#view').innerText();
-  ok(/Calls à préparer/.test(dash) && /Camille Test/.test(dash), 'dashboard lists the call to prepare');
+  ok(await page.locator('#view [data-a="callbrief"]').count() === 1 && /Dernier call/.test(dash), 'dashboard shows the next call with the last notes');
   ok(/Notes à écrire/i.test(dash), 'dashboard asks for the missing call notes');
-  ok(/Creator Portal/.test(dash) && await page.locator('#view a.line[href="https://lvhcontentmanager.netlify.app/requests/new"]').count() === 1, 'dashboard links to the Creator Portal');
+  ok(/Creator Portal/.test(dash) && await page.locator('#view .pt-strip a[href="https://lvhcontentmanager.netlify.app/requests/new"]').count() === 1, 'dashboard links to the Creator Portal');
   ok(/Paiement de Camille Test attendu/.test(dash), 'dashboard flags the late payment');
   ok(/reste à encaisser/.test(dash), 'dashboard shows what is left to collect');
   await shot('1-dashboard');
@@ -92,8 +92,9 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   await page.locator('.drawer [data-a="closedrawer"]').click();
 
   /* creator portal */
-  await page.locator('.side [data-nav="portal"]').click(); await page.waitForSelector('.pt-quick');
-  ok(await page.locator('.pt-page').count() === 9 && await page.locator('.pt-qa').count() === 4, 'portal page lists 4 shortcuts and 9 pages');
+  await page.locator('.side [data-nav="portal"]').click(); await page.waitForSelector('.pt-pages');
+  ok(await page.locator('.pt-page').count() === 9 && await page.locator('.head a[href$="/requests/new"]').count() === 1, 'portal page lists the 9 pages and a create button');
+  await page.locator('details.pt-set summary').click();
   ok(await page.locator('.pt-page[href$="/calendar"]').getAttribute('target') === '_blank', 'portal links open in a new tab');
   await page.fill('#portalUrlForm [name=u]', 'javascript:alert(1)'); await page.locator('#portalUrlForm button').click();
   ok(await page.evaluate(() => AOS.portalUrl()) === 'https://lvhcontentmanager.netlify.app', 'an unsafe portal address is refused');
@@ -102,6 +103,18 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(await page.locator('.pt-page[href="https://portal.example.com/media"]').count() === 1, 'the portal address can be changed');
   await page.evaluate(() => AOS.setDoc('settings/agency', { ...AOS.S.settings, portalUrl: '' }));
   await page.waitForTimeout(100); await shot('5-portal');
+
+  /* short menu, one settings button with tabs, quick add */
+  const side = await page.locator('.side .navs .nav').allInnerTexts();
+  ok(side.length <= 15 && !side.some(t => /Ma journée|Notifications|Analytics|Apparence/.test(t)), 'the menu is short: ' + side.length + ' entries');
+  await page.locator('.side-foot .nav').click(); await page.waitForSelector('.ptabs');
+  ok(await page.locator('.ptabs .chip').count() === 8, 'settings open from one button, with 8 tabs');
+  await page.locator('.ptabs .chip', { hasText: 'Personnalisation' }).click(); await page.waitForSelector('.modgrid');
+  ok(/Ma journée/.test(await page.locator('#view').innerText()), 'hidden pages can be shown again in Personnalisation');
+  await page.locator('.plusbtn').click(); await page.locator('.quick [data-col="calls"]').click(); await page.waitForSelector('#frm #f-title');
+  ok(true, 'the + button opens a new call form'); await page.locator('#frm [data-a="closeform"]').click();
+  const cols = await page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return [cs.getPropertyValue('--accent').trim(), cs.getPropertyValue('--bg').trim()]; });
+  ok(cols[0] === '#f4f6f8' && cols[1] === '#040506', 'default look is black and white');
 
   /* every page of the menu renders without error */
   const keys = await page.evaluate(() => AOS.NAV_FLAT.filter(p => p.view).map(p => p.k));
@@ -114,7 +127,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(await page.evaluate(() => AOS.validateBackup({ app: 'agency-os', format: 1, schema: 5, data: {}, docs: {} }).errors.length === 0), 'a backup from the previous tool is accepted');
 
   /* phone width */
-  await page.setViewportSize({ width: 390, height: 844 }); await page.evaluate(() => { location.hash = 'portal'; }); await page.waitForSelector('.pt-quick');
+  await page.setViewportSize({ width: 390, height: 844 }); await page.evaluate(() => { location.hash = 'portal'; }); await page.waitForSelector('.pt-pages');
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal scroll on a phone');
   await shot('6-portal-mobile');
 
