@@ -64,6 +64,8 @@
     if (canFin && AOS.modOn('accompagnement') && AOS.studentPayLate) S.students.filter(AOS.studentPayLate)
       .forEach(s => attn.push({ c: 'var(--bad)', t: `Paiement de ${s.name} attendu depuis le ${dShort(s.payNext)} (reste ${eur(AOS.studentRest(s))})`, open: 'students:' + s.id }));
 
+    /* a créatrice whose revenue dropped: last 30 days against the 30 before */
+    if (canFin && AOS.modOn('creatrices')) active.forEach(c => { const tr = AOS.creatorTrend(c.id); if (tr.pct !== null && tr.pct <= -15) attn.push({ c: 'var(--bad)', t: `${c.name} : CA en baisse de ${-tr.pct} % sur 30 jours (${eurK(tr.a)} contre ${eurK(tr.b)})`, open: 'creators:' + c.id }); });
     /* calls that happened and have no notes yet: the next brief would be empty */
     if (AOS.modOn('calls') && AOS.allowed('calls', 'u')) AOS.callsToWrite().slice(0, 3)
       .forEach(c => attn.push({ c: 'var(--violet)', t: `Notes à écrire : call du ${dShort(c.date)} avec ${c.title}`, a: 'callwrite', id: c.id }));
@@ -157,6 +159,20 @@
       `<div class="dash-top">${hero}${goalsBox}</div>
       <div class="grid g2 top">${planning}${tasks}</div>
       ${attnBox}${finCard}${stats}${portalBox}`;
+  };
+  /* revenue of a créatrice over the last 30 days against the 30 days before */
+  AOS.creatorTrend = function (id) {
+    const t = today(), d30 = addDays(t, -30), d60 = addDays(t, -60); let a = 0, b = 0;
+    for (const f of S.finances) { if (f.type !== 'Revenu' || f.creatorId !== id || !f.date || f.date > t) continue; if (f.date > d30) a += +f.amount || 0; else if (f.date > d60) b += +f.amount || 0; }
+    return { a, b, pct: b > 0 ? Math.round((a - b) / b * 100) : null };
+  };
+  /* small one-series line: months on the x axis, zero baseline, last point marked, values on hover */
+  AOS.sparkHtml = function (ser) {
+    const max = Math.max(...ser.map(x => x.v)) || 1, n = ser.length, X = i => i / (n - 1) * 100, Y = v => 100 - v / max * 86;
+    const pts = ser.map((x, i) => `${X(i).toFixed(2)},${Y(x.v).toFixed(2)}`), mName = k => new Date(k + '-15T12:00').toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    return `<div class="fin-plot sm" role="img" aria-label="${ser.map(x => `${monthLabel(x.k)} : ${eur(x.v)}`).join(', ')}"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="fin-area" d="M0,100 L${pts.join(' L')} L100,100 Z"/><line class="fin-base" x1="0" y1="100" x2="100" y2="100"/><path class="fin-line" d="M${pts.join(' L')}"/></svg>
+      <i class="fin-dot" style="left:${X(n - 1)}%;top:${Y(ser[n - 1].v)}%"></i>${ser.map((x, i) => `<span class="fin-hit" style="left:${X(i)}%" title="${esc(monthLabel(x.k))} : ${esc(eur(x.v))}"></span>`).join('')}</div>
+      <div class="fin-x">${ser.map((x, i) => `<span class="${i === n - 1 ? 'on' : ''}">${esc(mName(x.k))}</span>`).join('')}</div>`;
   };
   let finPts = null;
   function wireFin() {

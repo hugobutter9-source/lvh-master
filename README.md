@@ -25,6 +25,13 @@ exportée depuis l'ancien outil s'importe ici (Paramètres › Import / export).
   dans Paramètres › Personnalisation). Les réglages sont derrière un seul bouton « Paramètres ».
 - **Bouton +** (ou touche N) : ajouter une tâche, un call, un événement… depuis n'importe quelle page.
 
+- **Organigramme** : les cartes se déplacent et se relient directement, sans mode à activer ; un clic ouvre la
+  fiche, le bouton « Verrouiller » fige la disposition.
+- **Checklists** (page Tâches ou bouton +) : un modèle crée toutes ses tâches datées en un clic. Cinq modèles
+  fournis, modifiables, et on peut en ajouter.
+- **Créatrices** : courbe du CA sur 6 mois dans la fiche, et alerte sur le dashboard quand le CA des 30 derniers
+  jours baisse de 15 % ou plus par rapport aux 30 jours précédents.
+
 ## Lancer en local
 
 Aucune installation : c'est un site statique.

@@ -140,11 +140,12 @@
     quicknew: () => {
       if (document.querySelector('#layer .scrim')) return;
       document.getElementById('layer').insertAdjacentHTML('beforeend', `<div class="scrim" data-scrim="quick"><div class="modal sm" role="dialog" aria-modal="true" aria-labelledby="quickT"><div class="card-h"><h3 id="quickT">Ajouter</h3><button class="btn sm ghost" data-a="quickclose" aria-label="Fermer">${ic('x')}</button></div>
-        <div class="quick">${quick().map(([col, , l, i]) => `<button class="li click" data-a="quickpick" data-col="${col}">${ic(i, 17)}<span class="grow title">${l}</span>${ic('chev', 14)}</button>`).join('')}</div></div></div>`);
+        <div class="quick">${quick().map(([col, , l, i]) => `<button class="li click" data-a="quickpick" data-col="${col}">${ic(i, 17)}<span class="grow title">${l}</span>${ic('chev', 14)}</button>`).join('')}${AOS.modOn('taches') && AOS.allowed('tasks', 'c') ? `<button class="li click" data-a="quicktpl">${ic('layers', 17)}<span class="grow title">Checklist (plusieurs tâches d'un coup)</span>${ic('chev', 14)}</button>` : ''}</div></div></div>`);
       document.querySelector('#layer .quick button')?.focus();
     },
     quickclose: () => document.querySelector('#layer [data-scrim="quick"]')?.remove(),
     quickpick: el => { AOS.act.quickclose(); AOS.openForm(el.dataset.col); },
+    quicktpl: () => { AOS.act.quickclose(); AOS.openTemplates(); },
     menu: () => $('#side').classList.toggle('open'),
     mini: () => AOS.savePrefs({ sideMini: !S.prefs.sideMini }),
     togglesec: el => { const c = { ...(S.prefs.collapsed || {}) }; c[el.dataset.sec] = !c[el.dataset.sec]; AOS.savePrefs({ collapsed: c }); },

@@ -37,6 +37,12 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
     const cid = await A.save('creators', { name: 'Jade', stage: 'Active', commission: 40 });
     const amounts = [5200, 6100, 5800, 7400, 9000, 10350];
     for (let i = 0; i < 6; i++) await A.save('finances', { label: 'Abonnements', type: 'Revenu', category: 'Abonnements', amount: amounts[i], date: A.shiftMonth(t.slice(0, 7), i - 5) + '-0' + (i === 5 ? 1 : 5), creatorId: cid });
+    /* a second créatrice whose revenue fell: 4000 in the 30 days before, 1000 in the last 30 */
+    const c2 = await A.save('creators', { name: 'Lou', stage: 'Active', commission: 40, managerId: 'x' });
+    await A.save('finances', { label: 'Tips', type: 'Revenu', category: 'Tips', amount: 4000, date: A.addDays(t, -45), creatorId: c2 });
+    await A.save('finances', { label: 'Tips', type: 'Revenu', category: 'Tips', amount: 1000, date: A.addDays(t, -10), creatorId: c2 });
+    const boss = await A.save('team', { name: 'Hugo', role: 'CEO / Fondateur', dept: 'Direction', avail: 'Disponible' });
+    await A.save('team', { name: 'Charles', role: 'Closer', dept: 'Recrutement', avail: 'Disponible', reportsTo: boss });
     window.__sid = sid;
   });
   await page.waitForTimeout(200);
@@ -50,13 +56,15 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(/Creator Portal/.test(dash) && await page.locator('#view .pt-strip a[href="https://lvhcontentmanager.netlify.app/requests/new"]').count() === 1, 'dashboard links to the Creator Portal');
   ok(/Paiement de Camille Test attendu/.test(dash), 'dashboard flags the late payment');
   ok(/reste à encaisser/.test(dash), 'dashboard shows what is left to collect');
-  ok(/10[\s  ]350/.test(await page.locator('#finN').innerText()) && /▲ 15 %/.test(await page.locator('#finD').innerText()), 'revenue headline shows this month and the change');
+  ok(/Lou : CA en baisse de 75 % sur 30 jours/.test(dash) && !/Jade : CA en baisse/.test(dash), 'dashboard flags the créatrice whose revenue dropped');
+  const monthRev = await page.evaluate(() => AOS.eur(AOS.fin.rev(AOS.S, AOS.today().slice(0, 7))));
+  ok(await page.locator('#finN').innerText() === monthRev && /[▲▼] \d+ %/.test(await page.locator('#finD').innerText()), 'revenue headline shows this month and the change');
   await page.locator('#finPlot').scrollIntoViewIfNeeded();
   const box = await page.locator('#finPlot').boundingBox();
   await page.mouse.move(box.x + box.width * 0.6, box.y + 40);
   ok(/7[\s  ]400/.test(await page.locator('#finN').innerText()), 'moving along the line shows that month');
   await page.mouse.move(box.x + box.width / 2, box.y - 60);
-  ok(/10[\s  ]350/.test(await page.locator('#finN').innerText()), 'leaving the chart restores this month');
+  ok(await page.locator('#finN').innerText() === monthRev, 'leaving the chart restores this month');
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot('1-dashboard');
 
@@ -114,6 +122,32 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(await page.locator('.pt-page[href="https://portal.example.com/media"]').count() === 1, 'the portal address can be changed');
   await page.evaluate(() => AOS.setDoc('settings/agency', { ...AOS.S.settings, portalUrl: '' }));
   await page.waitForTimeout(100); await shot('5-portal');
+
+  /* org chart: a card moves straight away, a click still opens the fiche */
+  await page.locator('.side [data-nav="organigramme"]').click(); await page.waitForSelector('.oc-n');
+  ok(await page.locator('.oc.editing').count() === 1 && await page.locator('.oc-n .oc-h').count() >= 2, 'org chart is movable without an edit mode');
+  const card = page.locator('.oc-n', { hasText: 'Charles' }), b0 = await card.boundingBox();
+  await page.mouse.move(b0.x + 40, b0.y + 20); await page.mouse.down(); await page.mouse.move(b0.x + 140, b0.y + 90, { steps: 6 }); await page.mouse.up();
+  await page.waitForTimeout(150); const b1 = await page.locator('.oc-n', { hasText: 'Charles' }).boundingBox();
+  ok(Math.abs(b1.x - b0.x) > 50 && Math.abs(b1.y - b0.y) > 30 && await page.evaluate(() => !!(AOS.S.orgLayout && AOS.S.orgLayout.pos)), 'dragging a card moves it and saves its place');
+  ok(await page.locator('.drawer').count() === 0, 'dragging does not open the fiche');
+  await shot('7-organigramme');
+  await page.locator('.oc-n', { hasText: 'Hugo' }).click(); await page.waitForSelector('.drawer');
+  ok(true, 'a click opens the fiche'); await page.locator('.drawer [data-a="closedrawer"]').click();
+
+  /* checklists: one click creates dated tasks */
+  await page.locator('.side [data-nav="taches"]').click(); await page.locator('[data-a="tplopen"]').click();
+  await page.locator('#tplModal [data-a="tplrun"]', { hasText: 'Onboarding créatrice' }).click(); await page.waitForSelector('#tplRun');
+  await page.selectOption('#tpl-cr', { label: 'Jade' }); await page.fill('#tpl-lbl', 'Jade');
+  await shot('8-checklist');
+  const before = await page.evaluate(() => AOS.S.tasks.length);
+  await page.locator('#tplRun .btn.pri').click(); await page.waitForSelector('#tplModal', { state: 'detached' });
+  const made = await page.evaluate(n => { const A = AOS, ts = A.S.tasks.filter(x => x.fromTemplate === 'onb-creatrice'); return [A.S.tasks.length - n, ts.every(x => x.creatorId && / · Jade$/.test(x.title)), ts.some(x => x.due === A.addDays(A.today(), 30))]; }, before);
+  ok(made[0] === 9 && made[1] && made[2], 'a checklist creates its 9 dated tasks, linked to the créatrice');
+  await page.locator('[data-a="tplopen"]').click(); await page.locator('#tplModal [data-a="tpledit"][data-id=""]').click();
+  await page.fill('#tpl-title', 'Lancement PPV'); await page.fill('#tpl-steps', 'Préparer le média\nEnvoyer le PPV +2'); await page.locator('#tplEdit .btn.pri').click();
+  await page.waitForFunction(() => AOS.taskTemplates().some(x => x.title === 'Lancement PPV' && x.steps.length === 2 && x.steps[1][1] === 2));
+  ok(await page.evaluate(() => AOS.taskTemplates().length === 6), 'a custom checklist can be added'); await page.locator('#tplModal [data-a="tplclose"]').click();
 
   /* short menu, one settings button with tabs, quick add */
   const side = await page.locator('.side .navs .nav').allInnerTexts();

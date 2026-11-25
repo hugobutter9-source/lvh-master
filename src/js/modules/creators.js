@@ -58,11 +58,13 @@
     const es = sortBy(S.events.filter(e => e.creatorId === c.id && e.date >= today()), e => e.date);
     const ns = S.notes.filter(n => n.creatorId === c.id);
     const canU = AOS.allowed('creators', 'u'), showFin = AOS.flag(R, 'finance_view'), showCon = AOS.flag(R, 'contract_view');
-    const rev = AOS.fin.rev(S, mk, c.id);
+    const rev = AOS.fin.rev(S, mk, c.id), tr = AOS.creatorTrend(c.id);
+    const ser = [-5, -4, -3, -2, -1, 0].map(n => { const k = AOS.shiftMonth(mk, n); return { k, v: AOS.fin.rev(S, k, c.id) }; });
     return `<div class="dh">${av(c.name, 'lg')}<div class="grow"><h2>${esc(c.name)}${AOS.demoTag(c)}</h2><div class="muted">${[c.handle, c.platforms, c.country].filter(Boolean).map(esc).join(' · ')}</div></div><button class="btn sm ghost" data-a="closedrawer" aria-label="Fermer">${ic('x')}</button></div>
     <div class="sec"><h5>Statut</h5><div class="chips">${L.stages.map(s => canU ? `<button class="chip ${c.stage === s.k ? 'on' : ''}" data-a="setstage" data-id="${c.id}" data-v="${esc(s.k)}">${esc(s.k)}</button>` : (c.stage === s.k ? pill(s.k, AOS.col(s.c)) : '')).join('')}</div></div>
     ${showFin ? `<div class="grid g2 tight"><div class="card kpi sm"><span class="lbl">CA ce mois</span><span class="v">${eurK(rev)}</span></div>
-      <div class="card kpi sm"><span class="lbl">Part agence${showCon ? ` (${c.commission || 0} %)` : ''}</span><span class="v">${eurK(AOS.fin.com(S, mk, c.id))}</span></div></div>` : ''}
+      <div class="card kpi sm"><span class="lbl">Part agence${showCon ? ` (${c.commission || 0} %)` : ''}</span><span class="v">${eurK(AOS.fin.com(S, mk, c.id))}</span></div></div>
+      ${ser.some(x => x.v > 0) ? `<div class="card pad stack tight"><div class="row-between"><span class="lbl">CA sur 6 mois</span>${tr.pct === null ? '' : `<span class="fin-d ${tr.pct >= 0 ? 'up' : 'down'}" title="30 derniers jours comparés aux 30 précédents">${tr.pct >= 0 ? '▲' : '▼'} ${Math.abs(tr.pct)} % sur 30 j</span>`}</div>${AOS.sparkHtml(ser)}</div>` : ''}` : ''}
     <dl class="kv"><dt>Account manager</dt><dd>${c.managerId ? `<button class="linkbtn" data-open="team:${c.managerId}">${esc(nm('team', c.managerId))}</button>` : '<span class="faint">—</span>'}</dd>
       <dt>Équipe assignée</dt><dd>${(c.staff || []).filter(i => S.team.some(m => m.id === i)).map(i => `<button class="linkbtn" data-open="team:${i}">${esc(nm('team', i))}</button>`).join(', ') || '<span class="faint">—</span>'}</dd>
       <dt>Langue</dt><dd>${esc(c.language || '—')}</dd>

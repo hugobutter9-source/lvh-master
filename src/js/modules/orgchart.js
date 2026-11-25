@@ -11,6 +11,8 @@
   /* settings/* is written by Éditeurs and the owner only (server rule), so the layout follows the same level */
   const canEdit = () => AOS.can(me.role, 'organigramme', 'u') && (me.local || me.isOwner || me.canEdit);
   const canBoss = () => AOS.allowed('team', 'u');
+  /* cards can be moved and linked straight away; the lock button freezes the layout */
+  const edOn = () => !ui.orgLock && canEdit();
   const cam = () => ui.orgCam || (ui.orgCam = { x: 40, y: 30, k: 1, fit: true });
   let geo = null;   // { G, P } of the last render, used by the pointer handlers
 
@@ -28,22 +30,22 @@
       <div class="ft"><span class="tag">${esc(m.dept || '—')}</span><span style="color:${ac}">${esc(pr.effective || '')}</span></div>
       ${m.missions ? `<div class="ms">${esc(m.missions)}</div>` : ''}
       ${m.phone || n ? `<div class="ft"><span class="ph">${esc(m.phone || '')}</span>${n ? `<span class="faint">${n} tâche${n > 1 ? 's' : ''}</span>` : ''}</div>` : ''}
-      ${ui.orgEdit ? '<span class="oc-h" data-h title="Tirer vers une autre carte pour relier"></span>' : ''}</div>`;
+      ${edOn() ? '<span class="oc-h" data-h title="Tirer vers une autre carte pour relier"></span>' : ''}</div>`;
   }
   function boxCard(b, P) {
     return `<div class="oc-n oc-box" data-nid="${b.id}" ${canEdit() ? `data-a="ocbox" data-id="${b.id}"` : ''} tabindex="0" style="left:${P.x}px;top:${P.y}px;--c:${AOS.col(b.color || 'accent')}">
       <div class="nm">${esc(b.title)}</div>${b.sub ? `<div class="rl">${esc(b.sub)}</div>` : ''}
-      ${ui.orgEdit ? '<span class="oc-h" data-h title="Tirer vers une autre carte pour relier"></span>' : ''}</div>`;
+      ${edOn() ? '<span class="oc-h" data-h title="Tirer vers une autre carte pour relier"></span>' : ''}</div>`;
   }
 
   AOS.orgCanvas = function () {
     const L = AOS.lists(), team = active(), boxes = lay().boxes || [];
     const G = AOS.orgGraph(team, lay()), P = AOS.orgPositions(G, lay().pos);
     geo = { G, P };
-    const c = cam(), ed = ui.orgEdit && canEdit(), sel = ui.orgSel && [...G.hier, ...G.free].find(l => l.id === ui.orgSel);
+    const c = cam(), ed = edOn(), sel = ui.orgSel && [...G.hier, ...G.free].find(l => l.id === ui.orgSel);
     const name = id => AOS.nm('team', id) || (boxes.find(b => b.id === id) || {}).title || '?';
     const tools = `<div class="oc-bar">
-      ${canEdit() ? `<button class="btn sm ${ed ? 'pri' : ''}" data-a="ocedit">${ic(ed ? 'ok' : 'pen', 14)}${ed ? 'Terminé' : 'Modifier'}</button>` : ''}
+      ${canEdit() ? `<button class="btn sm" data-a="ocedit" title="${ed ? 'Figer la disposition' : 'Pouvoir déplacer et relier les cartes'}">${ic(ed ? 'lock' : 'pen', 14)}${ed ? 'Verrouiller' : 'Déverrouiller'}</button>` : ''}
       ${ed ? `<button class="btn sm" data-a="ocbox">${ic('plus', 14)}Case libre</button>
         <div class="seg sm" role="group" aria-label="Type de lien">${[['hier', 'Lien hiérarchique'], ['free', 'Lien libre']].map(([k, l]) => `<button class="${(ui.orgLink || 'hier') === k ? 'on' : ''}" data-a="oclink" data-v="${k}" ${k === 'hier' && !canBoss() ? 'disabled title="Ton rôle ne permet pas de modifier les responsables"' : ''}>${l}</button>`).join('')}</div>
         <button class="btn sm ghost" data-a="ocauto">${ic('layers', 14)}Disposition auto</button>` : ''}
@@ -56,7 +58,7 @@
         <svg class="oc-links" id="ocLinks" aria-hidden="true"></svg>
         ${team.map(m => personCard(m, L, P[m.id])).join('')}${boxes.map(b => boxCard(b, P[b.id])).join('')}
       </div></div>
-      ${ed ? `<p class="oc-help">Glisse une carte pour la déplacer · tire le <span class="oc-h demo"></span> sous une carte vers une autre pour les relier · clique sur un lien pour le modifier ou le supprimer · glisse le fond pour te déplacer, <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + molette pour zoomer.</p>` : ''}</div>`;
+      ${ed ? `<p class="oc-help">Glisse une carte pour la déplacer · tire le <span class="oc-h demo"></span> vers une autre carte pour les relier · clique sur un lien pour le supprimer · un clic sur une personne ouvre sa fiche.</p>` : ''}</div>`;
   };
 
   /* ---------- links: drawn after render, from the cards' real sizes ---------- */
@@ -78,7 +80,7 @@
     /* the svg is a large sheet offset by 5000px so clicks on links far from the origin still land on it */
     svg.innerHTML = '<g transform="translate(5000,5000)">' + all.map(l => { const a = box(l.a), b = box(l.b); if (!a || !b) return '';
       const d = curve(a, b), cls = `oc-l ${l.kind} ${l.style === 'dashed' || (l.kind === 'free' && !l.style) ? 'dashed' : ''} ${ui.orgSel === l.id ? 'sel' : ''}`;
-      return `<path d="${d}" class="${cls}"/>${ui.orgEdit ? `<path d="${d}" class="oc-hit" data-link="${l.id}"/>` : ''}`; }).join('') + (extra || '') + '</g>';
+      return `<path d="${d}" class="${cls}"/>${edOn() ? `<path d="${d}" class="oc-hit" data-link="${l.id}"/>` : ''}`; }).join('') + (extra || '') + '</g>';
   }
 
   /* ---------- camera ---------- */
@@ -108,8 +110,8 @@
       if (e.button !== 0) return;
       const h = e.target.closest('[data-h]'), n = e.target.closest('.oc-n'), hit = e.target.closest('[data-link]');
       if (hit) return;
-      if (h && ui.orgEdit) { const id = h.closest('.oc-n').dataset.nid; drag = { kind: 'link', id }; e.preventDefault(); }
-      else if (n && ui.orgEdit) { const p = world(e); drag = { kind: 'move', id: n.dataset.nid, el: n, dx: p.x - n.offsetLeft, dy: p.y - n.offsetTop, moved: false, sx: e.clientX, sy: e.clientY }; }
+      if (h && edOn()) { const id = h.closest('.oc-n').dataset.nid; drag = { kind: 'link', id }; e.preventDefault(); }
+      else if (n && edOn()) { const p = world(e); drag = { kind: 'move', id: n.dataset.nid, el: n, dx: p.x - n.offsetLeft, dy: p.y - n.offsetTop, moved: false, sx: e.clientX, sy: e.clientY }; }
       else if (!n) { const c = cam(); drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, x: c.x, y: c.y, moved: false }; }
       else return;
       vp.setPointerCapture(e.pointerId);
@@ -133,6 +135,8 @@
     const end = async e => {
       if (!drag) return; const d = drag; drag = null;
       if (d.moved || d.kind === 'link') justDragged = true;
+      /* the pointer is captured while a card is held, so a plain click is handled here: it opens the fiche (or the box editor) */
+      if (d.kind === 'move' && !d.moved) { justDragged = true; if (d.el.dataset.a === 'ocbox') AOS.act.ocbox(d.el); else AOS.openRecord('team', d.id); return; }
       if (d.kind === 'move' && d.moved) {
         d.el.classList.remove('dragging');
         const P = Object.fromEntries(Object.entries(geo.P).map(([k, v]) => [k, { x: v.x, y: v.y }]));
@@ -171,7 +175,7 @@
     await saveLay({ links: [...links, { id: 'l' + AOS.uid().slice(0, 10), a, b, style: isPerson(a) && isPerson(b) ? 'dashed' : 'solid' }] });
     AOS.render();
   }
-  AOS.act.ocedit = () => { ui.orgEdit = !ui.orgEdit; ui.orgSel = null; AOS.render(); };
+  AOS.act.ocedit = () => { ui.orgLock = edOn(); ui.orgSel = null; AOS.render(); };
   AOS.act.oclink = el => { ui.orgLink = el.dataset.v; AOS.render(); };
   AOS.act.ocdesel = () => { ui.orgSel = null; AOS.render(); };
   AOS.act.oczoom = el => { const vp = document.getElementById('ocVp'); zoomAt(cam().k * (el.dataset.v === '1' ? 1.2 : 1 / 1.2), vp.clientWidth / 2, vp.clientHeight / 2); };
@@ -230,7 +234,7 @@
     };
   };
   document.addEventListener('keydown', e => {
-    if (!ui.orgEdit || !ui.orgSel || !document.getElementById('ocVp') || e.target.closest('input,textarea,select')) return;
+    if (!edOn() || !ui.orgSel || !document.getElementById('ocVp') || e.target.closest('input,textarea,select')) return;
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); AOS.act.ocunlink(); }
     if (e.key === 'Escape') { ui.orgSel = null; AOS.render(); }
   });
