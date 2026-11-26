@@ -3,7 +3,7 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
 const ROOT = path.join(__dirname, '..', 'src'), SHOTS = process.env.SHOTS || '';
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer((req, res) => {
   const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]).replace(/\/$/, '/index.html'));
   if (!f.startsWith(ROOT) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
@@ -22,6 +22,9 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto(base); await page.waitForSelector('.hero');
   ok(await page.title() === 'LVH Master', 'title is LVH Master');
+  const man = await page.evaluate(async () => { const m = await (await fetch(document.querySelector('link[rel=manifest]').href)).json(); const sizes = []; for (const i of m.icons) { const r = await fetch(i.src); sizes.push(r.ok && r.headers.get('content-type') === 'image/png'); } return [m.display, m.icons.length, sizes.every(Boolean)]; });
+  ok(man[0] === 'standalone' && man[1] === 3 && man[2], 'the app is installable: manifest and icons are served');
+  ok(await page.evaluate(() => navigator.serviceWorker.ready.then(r => !!r.active)), 'the service worker is active (offline support)');
   ok(await page.locator('.side .brand b').innerText() === 'LVH Master', 'brand shows LVH Master');
   ok(await page.locator('.side [data-nav="portal"]').count() === 1, 'Creator Portal is in the menu');
 

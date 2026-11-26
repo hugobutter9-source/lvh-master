@@ -6,6 +6,14 @@
 <title>LVH Master</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LVH Master">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Oswald:wght@700&display=swap">
 <link rel="stylesheet" href="css/app.css">
@@ -46,5 +54,11 @@
 <script src="js/modules/drive.js"></script>
 <script src="js/modules/settings.js"></script>
 <script src="js/app.js"></script>
+<script>
+/* installed-app support: only on a real site (not inside a preview frame) */
+if ('serviceWorker' in navigator && !window.claude && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
 </body>
 </html>
