@@ -7,13 +7,14 @@
   const COLORS = { white: '#ffffff', pink: '#f472b6', violet: '#a78bfa', blue: '#5b9cf6', cyan: '#22c8dc', green: '#34d399', yellow: '#fbbf24', orange: '#fb923c', red: '#f87171' };
   const LEGACY = { teal: 'green', sky: 'blue', rose: 'pink' };
   const BGS = {
+    ink: { l: 'Encre', bg: '#0a0b12', bg2: '#0f1019', panel: '#171927', panel2: '#212436' },
     black: { l: 'Noir', bg: '#000000', bg2: '#0a0a0b', panel: '#111113', panel2: '#1c1c1f' },
     graphite: { l: 'Graphite', bg: '#0b0d10', bg2: '#101318', panel: '#14181e', panel2: '#1b2027' },
     night: { l: 'Bleu nuit', bg: '#060a14', bg2: '#0a1020', panel: '#0f172a', panel2: '#162036' },
     aubergine: { l: 'Aubergine', bg: '#0d0710', bg2: '#140b19', panel: '#1a1020', panel2: '#23162b' },
     forest: { l: 'Forêt', bg: '#050c09', bg2: '#08130e', panel: '#0d1914', panel2: '#14231c' }
   };
-  const AMB = { neon: ['Néon', ['#f472b6', '#a78bfa', '#22d3ee']], ocean: ['Océan', ['#3b82f6', '#22c8dc', '#6366f1']], sunset: ['Sunset', ['#fb923c', '#f472b6', '#facc15']],
+  const AMB = { aurora: ['Aurore', ['#7c8cff', '#4fd6c0', '#ff9d8a']], neon: ['Néon', ['#f472b6', '#a78bfa', '#22d3ee']], ocean: ['Océan', ['#3b82f6', '#22c8dc', '#6366f1']], sunset: ['Sunset', ['#fb923c', '#f472b6', '#facc15']],
     gold: ['Or', ['#fbbf24', '#f59e0b', '#fde68a']], forest: ['Forêt', ['#34d399', '#14b8a6', '#a3e635']], white: ['Blanc', ['#ffffff', '#cbd5e1', '#94a3b8']] };
   const FONTS = ['Geist', 'Inter', 'DM Sans', 'Manrope', 'Poppins', 'Space Grotesk', 'Outfit', 'Sora'];
   const THEMES = {
@@ -22,11 +23,12 @@
     sunset: { l: 'Sunset', accent: 'orange', badge: 'pink', bg: 'graphite', amb: 'sunset', ambI: 50 },
     gold: { l: 'Or et noir', accent: 'yellow', badge: 'yellow', bg: 'black', amb: 'gold', ambI: 40 },
     forest: { l: 'Forêt', accent: 'green', badge: 'green', bg: 'forest', amb: 'forest', ambI: 45 },
-    mono: { l: 'Noir et blanc (défaut)', accent: 'white', badge: 'green', bg: 'black', amb: 'white', ambI: 0, glass: 'none' },
+    bulles: { l: 'Bulles (défaut)', style: 'bubble', accent: '#8ea2ff', badge: 'green', bg: 'ink', amb: 'aurora', ambI: 60, ambMove: true, glass: 'strong', corners: 'round2' },
+    mono: { l: 'Noir et blanc', style: 'flat', accent: 'white', badge: 'green', bg: 'black', amb: 'white', ambI: 0, ambMove: false, glass: 'none', corners: 'round' },
     minimal: { l: 'Minimal', accent: 'white', badge: 'white', bg: 'graphite', amb: 'white', ambI: 12, glass: 'none' },
     cyan: { l: 'Cyan', accent: 'cyan', badge: 'cyan', bg: 'graphite', amb: 'ocean', ambI: 35 }
   };
-  const DEF = { theme: 'system', accent: 'white', badge: 'green', bg: 'black', amb: 'white', ambI: 0, ambMove: false, ambCustom: ['#22c8dc', '#a78bfa', '#f472b6'], clock: true, dense: false, sideMini: false, glass: 'none', corners: 'round', size: 'normal', font: 'Geist', appName: '', logo: '' };
+  const DEF = { style: 'bubble', theme: 'system', accent: '#8ea2ff', badge: 'green', bg: 'ink', amb: 'aurora', ambI: 60, ambMove: true, ambCustom: ['#22c8dc', '#a78bfa', '#f472b6'], clock: true, dense: false, sideMini: false, glass: 'strong', corners: 'round2', size: 'normal', font: 'Geist', appName: '', logo: '' };
   AOS.APPEARANCE = { COLORS, BGS, AMB, FONTS, THEMES, DEF };
   const P = () => ({ ...DEF, ...(S.prefs || {}) });
   const hex = v => COLORS[LEGACY[v] || v] || (/^#[0-9a-f]{6}$/i.test(v || '') ? v : COLORS.white);
@@ -47,12 +49,14 @@
     const p = P(), root = document.documentElement, st = root.style;
     if (p.theme === 'dark' || p.theme === 'light') { root.dataset.theme = p.theme; root.dataset.ownTheme = '1'; }
     else if (root.dataset.ownTheme) { delete root.dataset.theme; delete root.dataset.ownTheme; }
+    root.dataset.style = p.style === 'flat' ? 'flat' : 'bubble';   // two looks: soft glass bubbles, or flat black and white
     const light = root.dataset.theme ? root.dataset.theme === 'light' : !!(mq && mq.matches);
     /* colours: buttons and badges; a light accent gets dark ink, and is darkened on a light background */
     let a = hex(p.accent), b = hex(p.badge);
     if (light) { if (lum(a) > .35) a = mix(a, '#000000', lum(a) > .8 ? 1 : .38); if (lum(b) > .35) b = mix(b, '#000000', lum(b) > .8 ? 1 : .38); }
-    st.setProperty('--accent', a); st.setProperty('--accent-ink', lum(a) > .45 ? '#0a0c0f' : '#ffffff');
-    st.setProperty('--badge', b); st.setProperty('--badge-ink', lum(b) > .45 ? '#0a0c0f' : '#ffffff');
+    /* ink = whichever of near-black / white reads better on the colour (equal contrast at a luminance of about .18) */
+    st.setProperty('--accent', a); st.setProperty('--accent-ink', lum(a) > .18 ? '#0a0c0f' : '#ffffff');
+    st.setProperty('--badge', b); st.setProperty('--badge-ink', lum(b) > .18 ? '#0a0c0f' : '#ffffff');
     st.setProperty('--glow', light || !(+p.ambI > 0) ? 'transparent' : a + '17');
     /* background (dark mode only: light mode keeps its own neutrals) */
     const B = BGS[p.bg] || BGS.graphite;
@@ -68,7 +72,7 @@
     st.zoom = { small: .92, normal: 1, large: 1.08, xlarge: 1.17 }[p.size] || 1;
     root.classList.toggle('dense', !!p.dense);
     /* ambient light */
-    const cols = p.amb === 'custom' ? p.ambCustom : (AMB[p.amb] || AMB.ocean)[1];
+    const cols = p.amb === 'custom' ? p.ambCustom : (AMB[p.amb] || AMB.aurora)[1];
     cols.forEach((c, i) => st.setProperty('--amb' + (i + 1), hex(c)));
     st.setProperty('--amb-o', String((light ? .45 : 1) * Math.max(0, Math.min(100, +p.ambI)) / 100));
     root.classList.toggle('amb-move', !!p.ambMove);
@@ -89,7 +93,9 @@
     const tile = ([k, t]) => { const am = AMB[t.amb][1], bg = BGS[t.bg]; return `<button class="theme-tile" data-a="aptheme" data-v="${k}"><span class="tt-prev" style="background:radial-gradient(120% 90% at 0% 0%,${am[0]}88,transparent 60%),radial-gradient(120% 90% at 100% 100%,${am[1]}77,transparent 60%),${bg.panel}">
       <i class="tt-bar"></i><i class="tt-btn" style="background:${hex(t.accent)}"></i></span><span>${esc(t.l)}</span></button>`; };
     return AOS.header({ eyebrow: `Apparence · ${AOS.db() && AOS.me.uid ? 'enregistrée sur ton compte, sur tous tes appareils' : 'enregistrée sur cet appareil'}`, title: 'Personnaliser', actions: '<button class="btn" data-a="apreset">Tout réinitialiser</button>' }) +
-    `<section class="card pad"><div class="box-h"><h3>Thèmes prêts</h3><span class="faint small">un clic pour l'essayer, tout reste modifiable</span></div><div class="themes">${Object.entries(THEMES).map(tile).join('')}</div></section>
+    `<section class="card pad stack"><div class="box-h"><h3>Style graphique</h3><span class="faint small">un clic pour changer, un clic pour revenir</span></div>
+      <div class="style-pick">${[['bulles', 'Bulles', 'Verre dépoli, bulles de couleur, formes rondes'], ['mono', 'Noir et blanc', 'À plat, façon app de trading']].map(([k, l, d]) => `<button class="style-tile ${(p.style === 'flat' ? 'mono' : 'bulles') === k ? 'on' : ''}" data-a="aptheme" data-v="${k}" aria-pressed="${(p.style === 'flat' ? 'mono' : 'bulles') === k}"><span class="style-prev ${k}"><i></i><i></i><i></i><b></b></span><span class="style-txt"><b>${l}</b><small>${d}</small></span></button>`).join('')}</div></section>
+    <section class="card pad"><div class="box-h"><h3>Thèmes prêts</h3><span class="faint small">un clic pour l'essayer, tout reste modifiable</span></div><div class="themes">${Object.entries(THEMES).map(tile).join('')}</div></section>
     <div class="grid g2 top">
       <section class="card pad stack"><h3 class="h3">Couleurs</h3>
         <div class="stack tight"><span class="muted small">Boutons principaux</span>${swatches('accent')}</div>
@@ -120,7 +126,7 @@
   Object.assign(AOS.act, {
     ap: el => AOS.savePrefs({ [el.dataset.k]: val(el.dataset.v) }),
     apfont: el => AOS.savePrefs({ font: el.dataset.v }),
-    aptheme: el => { const { l, ...t } = THEMES[el.dataset.v]; AOS.savePrefs({ glass: 'normal', ...t }); toast(`Thème ${l} appliqué`); },
+    aptheme: el => { const { l, ...t } = THEMES[el.dataset.v]; AOS.savePrefs({ ...(t.style ? {} : { glass: P().style === 'flat' ? 'none' : 'strong' }), ...t }); toast(`Thème ${l} appliqué`); },
     apreset: async () => { if (!(await AOS.confirm({ title: 'Tout réinitialiser ?', body: 'Ton apparence revient aux réglages par défaut. Tes favoris et ton menu ne changent pas.', ok: 'Réinitialiser' }))) return; AOS.savePrefs({ ...DEF }); }
   });
   const nameT = {};

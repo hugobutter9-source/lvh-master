@@ -194,7 +194,16 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   await page.locator('.plusbtn').click(); await page.locator('.quick [data-col="calls"]').click(); await page.waitForSelector('#frm #f-title');
   ok(true, 'the + button opens a new call form'); await page.locator('#frm [data-a="closeform"]').click();
   const cols = await page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return [cs.getPropertyValue('--accent').trim(), cs.getPropertyValue('--bg').trim()]; });
-  ok(cols[0] === '#ffffff' && cols[1] === '#000000', 'default look is black and white');
+  ok(cols[0] === '#8ea2ff' && cols[1] === '#0a0b12' && await page.evaluate(() => document.documentElement.dataset.style === 'bubble'), 'default look is the bubble style');
+  await page.locator('.ptabs .chip', { hasText: 'Apparence' }).click(); await page.waitForSelector('.style-pick');
+  await shot('11-apparence');
+  await page.locator('.style-tile', { hasText: 'Noir et blanc' }).click();
+  await page.waitForFunction(() => document.documentElement.dataset.style === 'flat');
+  const flat = await page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return [cs.getPropertyValue('--accent').trim(), cs.getPropertyValue('--bg').trim(), getComputedStyle(document.querySelector('.card')).boxShadow]; });
+  ok(flat[0] === '#ffffff' && flat[1] === '#000000' && flat[2] === 'none', 'one click brings back the flat black and white look');
+  await page.locator('.style-tile', { hasText: 'Bulles' }).click();
+  await page.waitForFunction(() => document.documentElement.dataset.style === 'bubble');
+  ok(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() === '#8ea2ff' && getComputedStyle(document.querySelector('.card')).boxShadow !== 'none'), 'and one more click returns to the bubble look');
 
   /* portal link: sign in with the portal account, then see what was sent and what came back */
   await page.locator('.side [data-nav="portal"]').click(); await page.waitForSelector('#portalLogin');
