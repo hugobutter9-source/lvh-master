@@ -77,6 +77,12 @@
     } else if (PL.state !== 'off' && Date.now() - Math.max(PL.at, PL.tried || 0) > STALE && !PL.busy && navigator.onLine !== false) setTimeout(load, 0);
   }
 
+  /* keep the figures fresh while the dashboard or the portal page is on screen, and when coming back to the app */
+  const onScreen = () => document.visibilityState === 'visible' && ['dashboard', 'portal'].includes(AOS.currentView ? AOS.currentView() : '');
+  setInterval(() => { if (onScreen()) touch(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (onScreen()) touch(); });
+  window.addEventListener('online', () => { if (onScreen()) touch(); });
+
   const ST = { draft: ['Brouillon', 'faint'], todo: ['À faire', 'faint'], in_progress: ['En cours', 'info'], submitted: ['Reçu, à valider', 'violet'], in_review: ['En validation', 'violet'],
     revision_requested: ['À corriger', 'warn'], approved: ['Approuvé', 'ok'], scheduled: ['Planifié', 'info'], published: ['Publié', 'ok'], declined: ['Refusé', 'bad'] };
   const OPEN = ['todo', 'in_progress', 'revision_requested'], REVIEW = ['submitted', 'in_review'];

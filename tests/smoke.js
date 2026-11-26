@@ -209,6 +209,12 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(/1\s*à valider/.test(await page.locator('.pt-mini').innerText()) && /Reel playback hook/.test(await page.locator('#view').innerText()), 'the dashboard shows what is waiting in the portal');
   await page.reload(); await page.waitForSelector('.pt-mini');
   ok(true, 'the link survives a reload');
+  /* something new arrives in the portal: it shows up without touching anything */
+  await page.waitForFunction(() => !AOS.portalLink.busy && AOS.portalLink.state === 'on');
+  portal.requests.push({ id: '55555555-5555-4555-8555-555555555555', title: 'Nouvelle vidéo reçue', status: 'submitted', platform: 'tiktok', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(1), updated_at: dAgo(0), submitted_at: dAgo(0), approved_at: null });
+  await page.evaluate(() => { AOS.portalLink.at = 0; AOS.portalLink.tried = 0; document.dispatchEvent(new Event('visibilitychange')); });
+  await page.waitForFunction(() => /2\s*à valider/.test(document.querySelector('.pt-mini').innerText));
+  ok(/Nouvelle vidéo reçue/.test(await page.locator('#view').innerText()), 'new returns from the models appear on their own');
   await page.waitForFunction(() => !AOS.portalLink.busy && AOS.portalLink.state === 'on');
   portal.role = 'creator'; await page.evaluate(() => AOS.portalRefresh()); await page.evaluate(() => { location.hash = 'portal'; }); await page.waitForSelector('#portalLogin');
   ok(/n'est pas un compte manager/.test(await page.locator('#view').innerText()) && await page.evaluate(() => localStorage.getItem('lvh.portal.cache') === null), 'a model account is refused and nothing stays on the device');
