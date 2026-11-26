@@ -50,30 +50,41 @@
     }
   }
   /* ---------- incoming: what changed on the server since the last look ---------- */
-  async function pull(c, me, onRow) {
-    let cursor = get(K.cursor, null), seen = 0;
+  async function fetchSince(c, me, cursor) {
+    const rows = [];
     for (;;) {
       let q = c.from('crm_records').select('col, id, data, deleted, updated_at').eq('user_id', me).order('updated_at', { ascending: true }).limit(500);
       if (cursor) q = q.gt('updated_at', cursor);
       const { data, error } = await q; if (error) throw error;
-      if (!data.length) break;
-      const ops = [];
-      for (const r of data) {
-        if (onRow) onRow(r);
-        if (Y.queue[r.col + '/' + r.id]) continue;            // a newer local change is waiting to be sent
-        if (r.col === '_doc') { if (PATHS[r.id] && !r.deleted) ops.push({ op: 'set', path: PATHS[r.id], data: r.data }); }
-        else if (COLS().includes(r.col)) {
-          const cur = (S[r.col] || []).find(x => x.id === r.id);
-          if (r.deleted) { if (cur) ops.push({ op: 'delete', col: r.col, id: r.id }); }
-          else if (!cur || JSON.stringify(cur) !== JSON.stringify({ ...r.data, id: r.id })) ops.push({ op: 'set', col: r.col, id: r.id, data: r.data });
-        }
-      }
-      if (ops.length) AOS.applyRemote(ops);
-      seen += data.length; cursor = data[data.length - 1].updated_at; set(K.cursor, cursor);
+      rows.push(...data);
+      if (data.length) cursor = data[data.length - 1].updated_at;
       if (data.length < 500) break;
     }
-    return seen;
+    return { rows, cursor };
   }
+  function applyRows(rows) {
+    const ops = [];
+    for (const r of rows) {
+      if (Y.queue[r.col + '/' + r.id]) continue;            // a newer local change is waiting to be sent
+      if (r.col === '_doc') { if (PATHS[r.id] && !r.deleted) ops.push({ op: 'set', path: PATHS[r.id], data: r.data }); }
+      else if (COLS().includes(r.col)) {
+        const cur = (S[r.col] || []).find(x => x.id === r.id);
+        if (r.deleted) { if (cur) ops.push({ op: 'delete', col: r.col, id: r.id }); }
+        else if (!cur || JSON.stringify(cur) !== JSON.stringify({ ...r.data, id: r.id })) ops.push({ op: 'set', col: r.col, id: r.id, data: r.data });
+      }
+    }
+    if (ops.length) AOS.applyRemote(ops);
+  }
+  /* "real" content: anything the person entered, as opposed to what every fresh install contains */
+  const BASE = ['roles', 'users'];
+  const localHasContent = () => COLS().some(c => !BASE.includes(c) && (S[c] || []).some(r => !r.demo));
+  const allLocalOps = have => {
+    const ops = [];
+    for (const col of COLS()) for (const r of S[col] || []) if (!r.demo && !(have && have.has(col + '/' + r.id))) ops.push({ op: 'set', col, id: r.id, data: r });
+    const doc = (path, data) => { if (data && !(have && have.has('_doc/' + DOCS[path]))) ops.push({ op: 'set', path, data }); };
+    doc('settings/agency', S.settings); doc('settings/lists', S.listsStored); doc('settings/org', S.orgLayout); doc('meta/schema', S.schema);
+    return ops;
+  };
 
   /* ---------- one round: first link merges, later rounds exchange changes ---------- */
   Y.now = async function () {
@@ -83,20 +94,24 @@
     Y.busy = true; if (AOS.renderStatus) AOS.renderStatus();
     try {
       if (!get(K.cursor, null)) {
-        /* first time on this device: take what the account already has, then add what only this device has */
-        const have = new Set();
-        await pull(c, me, r => have.add(r.col + '/' + r.id));
-        const ops = [];
-        for (const col of COLS()) for (const r of S[col] || []) if (!have.has(col + '/' + r.id) && !r.demo) ops.push({ op: 'set', col, id: r.id, data: r });
-        if (!have.has('_doc/settings_agency')) ops.push({ op: 'set', path: 'settings/agency', data: S.settings });
-        if (!have.has('_doc/settings_lists') && S.listsStored) ops.push({ op: 'set', path: 'settings/lists', data: S.listsStored });
-        if (!have.has('_doc/settings_org') && S.orgLayout) ops.push({ op: 'set', path: 'settings/org', data: S.orgLayout });
-        if (!have.has('_doc/meta_schema') && S.schema) ops.push({ op: 'set', path: 'meta/schema', data: S.schema });
-        const mine = { ...Y.queue }; Y.queue = {}; AOS.syncEnqueue(ops); Object.assign(Y.queue, mine); set(K.queue, Y.queue);
-        if (!get(K.cursor, null)) set(K.cursor, '1970-01-01T00:00:00Z');
+        /* first time on this device */
+        const got = await fetchSince(c, me, null);
+        const serverHasContent = got.rows.some(r => !r.deleted && r.col !== '_doc' && !BASE.includes(r.col));
+        const mine = { ...Y.queue }; Y.queue = {};
+        if (localHasContent() && !serverHasContent) {
+          /* the account only holds what an empty device sent: this device is the reference, settings included */
+          AOS.syncEnqueue(allLocalOps(null));
+        } else {
+          /* the account already has content: take it, then add what only this device has */
+          applyRows(got.rows);
+          AOS.syncEnqueue(allLocalOps(new Set(got.rows.map(r => r.col + '/' + r.id))));
+        }
+        Object.assign(Y.queue, mine); set(K.queue, Y.queue);
+        set(K.cursor, got.cursor || '1970-01-01T00:00:00Z');
       }
       if (pending()) await push(c, me);
-      await pull(c, me);
+      const got = await fetchSince(c, me, get(K.cursor, null));
+      applyRows(got.rows); if (got.cursor) set(K.cursor, got.cursor);
       Y.error = ''; Y.last = Date.now();
     } catch (e) { Y.error = /fetch|network|load failed/i.test((e && e.message) || '') ? 'offline' : 'server'; }
     finally { Y.busy = false; if (AOS.renderStatus) AOS.renderStatus(); }

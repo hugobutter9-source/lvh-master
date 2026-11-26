@@ -243,6 +243,28 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   if (SHOTS) await phone.screenshot({ path: path.join(SHOTS, '10-telephone.png') });
   await phoneCtx.close();
 
+  /* the real-life order: an empty phone signs in first, then the computer that holds the data.
+     The computer must stay the reference, settings included, and the phone must then receive everything. */
+  {
+    const saved = portal.crm; portal.crm = [];
+    const mk = async (w, h) => { const cx = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: 'dark' }), pg = await cx.newPage();
+      await pg.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); await pg.route('https://togzyxnopontjwjkxcod.supabase.co/**', portalRoute);
+      await pg.goto(base); await pg.waitForSelector('.hero'); return [cx, pg]; };
+    const signIn = async pg => { await pg.evaluate(() => AOS.act.account()); await pg.fill('#ac-email', 'hugo@example.com'); await pg.fill('#ac-pass', 'bon-mot-de-passe'); await pg.locator('#accountLogin .btn.pri').click();
+      await pg.waitForFunction(() => AOS.sync.on() && !AOS.sync.busy && AOS.sync.pending() === 0 && AOS.sync.last > 0); };
+    const [c1, emptyPhone] = await mk(390, 844); await signIn(emptyPhone);
+    ok(portal.crm.length > 0 && !portal.crm.some(r => r.col === 'tasks' || r.col === 'goals'), 'an empty phone that signs in first only sends its defaults');
+    const [c2, desk] = await mk(1280, 900);
+    await desk.evaluate(async () => { const A = AOS; await A.setDoc('settings/agency', { ...A.S.settings, name: 'LVH', owner: 'Hugo' });
+      await A.save('goals', { title: 'Huracan technica', metric: 'manual', target: 1, current: 0, start: A.today(), end: A.addDays(A.today(), 30), scope: 'Agence', pinned: true });
+      await A.save('tasks', { title: 'storie fm / perso', status: 'À faire', priority: 'Normale', due: A.today() }); });
+    await signIn(desk);
+    ok(await desk.evaluate(() => AOS.S.settings.name === 'LVH' && AOS.S.goals.length === 1 && AOS.S.tasks.length === 1), 'the computer keeps its own data and settings when it signs in second');
+    await emptyPhone.evaluate(() => AOS.sync.now());
+    ok(await emptyPhone.evaluate(() => AOS.S.settings.name === 'LVH' && AOS.S.goals.some(g => g.title === 'Huracan technica') && AOS.S.tasks.some(t => t.title === 'storie fm / perso')), 'the phone then receives the goal, the task and the settings');
+    await c1.close(); await c2.close(); portal.crm = saved;
+  }
+
   /* something new arrives in the portal: it shows up without touching anything */
   await page.waitForFunction(() => !AOS.portalLink.busy && AOS.portalLink.state === 'on');
   portal.requests.push({ id: '55555555-5555-4555-8555-555555555555', title: 'Nouvelle vidéo reçue', status: 'submitted', platform: 'tiktok', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(1), updated_at: dAgo(0), submitted_at: dAgo(0), approved_at: null });

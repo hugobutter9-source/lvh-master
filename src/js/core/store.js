@@ -176,6 +176,8 @@
       try { await AOS.backup.createSnapshot('avant migration v' + plan.from + ' → v' + plan.to); }
       catch (e) { status.error = 'Migration reportée : sauvegarde préalable impossible.'; emitStatus(); return; }
     }
+    /* on a device, keep an untouched copy of the data as it was before the update */
+    if (!DB) { try { const raw = localStorage.getItem(LS); if (raw) localStorage.setItem(LS + '.avant-v' + plan.to, raw); } catch (e) { } }
     const res = await applyOps(plan.ops, { stopOnError: true });
     if (res.ok === plan.ops.length) { audit({ act: 'migration', label: `Données migrées de la version ${plan.from} à ${plan.to}` }); AOS.toast(`Base de données mise à jour (version ${plan.to}).`); }
   }
