@@ -20,6 +20,31 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) errors.push(m.text()); });
   const shot = async name => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + '.png'), fullPage: true }); };
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  /* a stand-in for the portal's database: same routes and shapes as the real one, fictional rows */
+  const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url'), jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: 'u-hugo', role: 'authenticated', exp: Math.floor(Date.now() / 1000) + 3600 })}.sig`;
+  const dAgo = n => new Date(Date.now() - n * 864e5).toISOString();
+  const portal = { logins: [], role: 'manager',
+    people: [{ id: 'u-hugo', full_name: 'Hugo', role: 'manager', status: 'active' }, { id: 'u-lucas', full_name: 'Lucas', role: 'manager', status: 'active' }, { id: 'c-jade', full_name: 'Jade', role: 'creator', status: 'active' }],
+    requests: [
+      { id: '11111111-1111-4111-8111-111111111111', title: 'Reel playback hook', status: 'submitted', platform: 'instagram', deadline: dAgo(-2), creator_id: 'c-jade', created_by: 'u-lucas', created_at: dAgo(4), updated_at: dAgo(0.2), submitted_at: dAgo(0.2), approved_at: null },
+      { id: '22222222-2222-4222-8222-222222222222', title: 'Story coulisses', status: 'todo', platform: 'instagram', deadline: dAgo(1), creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(3), updated_at: dAgo(3), submitted_at: null, approved_at: null },
+      { id: '33333333-3333-4333-8333-333333333333', title: 'TikTok trend', status: 'approved', platform: 'tiktok', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(6), updated_at: dAgo(1), submitted_at: dAgo(2), approved_at: dAgo(1) },
+      { id: '44444444-4444-4444-8444-444444444444', title: 'Brouillon caché', status: 'draft', platform: 'instagram', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(1), updated_at: dAgo(1), submitted_at: null, approved_at: null }],
+    media: [{ id: 'm1', request_id: '11111111-1111-4111-8111-111111111111', creator_id: 'c-jade', kind: 'video', review_state: 'pending', created_at: dAgo(0.2) }, { id: 'm2', request_id: '11111111-1111-4111-8111-111111111111', creator_id: 'c-jade', kind: 'video', review_state: 'pending', created_at: dAgo(0.2) }] };
+  await page.route('https://togzyxnopontjwjkxcod.supabase.co/**', async route => {
+    const req = route.request(), url = new URL(req.url()), cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
+    const json = (body, status = 200) => route.fulfill({ status, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (url.pathname === '/auth/v1/token') { const b = req.postDataJSON() || {}; portal.logins.push(b.email);
+      if (b.password !== 'bon-mot-de-passe') return json({ code: 400, error_code: 'invalid_credentials', msg: 'Invalid login credentials' }, 400);
+      return json({ access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r1', user: { id: 'u-hugo', aud: 'authenticated', role: 'authenticated', email: b.email, app_metadata: {}, user_metadata: {}, created_at: dAgo(30) } }); }
+    if (url.pathname === '/auth/v1/logout') return route.fulfill({ status: 204, headers: cors });
+    if (!/^Bearer ey/.test(req.headers().authorization || '')) return json({ message: 'no session' }, 401);
+    if (url.pathname === '/rest/v1/profiles') return (req.headers().accept || '').includes('vnd.pgrst.object') ? json({ ...portal.people[0], role: portal.role }) : json(portal.people);
+    if (url.pathname === '/rest/v1/content_requests') return json(portal.requests.filter(r => r.status !== 'archived'));
+    if (url.pathname === '/rest/v1/media_assets') return json(portal.media);
+    return json([]);
+  });
   await page.goto(base); await page.waitForSelector('.hero');
   ok(await page.title() === 'LVH Master', 'title is LVH Master');
   const man = await page.evaluate(async () => { const m = await (await fetch(document.querySelector('link[rel=manifest]').href)).json(); const sizes = []; for (const i of m.icons) { const r = await fetch(i.src); sizes.push(r.ok && r.headers.get('content-type') === 'image/png'); } return [m.display, m.icons.length, sizes.every(Boolean)]; });
@@ -163,6 +188,31 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(true, 'the + button opens a new call form'); await page.locator('#frm [data-a="closeform"]').click();
   const cols = await page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return [cs.getPropertyValue('--accent').trim(), cs.getPropertyValue('--bg').trim()]; });
   ok(cols[0] === '#ffffff' && cols[1] === '#000000', 'default look is black and white');
+
+  /* portal link: sign in with the portal account, then see what was sent and what came back */
+  await page.locator('.side [data-nav="portal"]').click(); await page.waitForSelector('#portalLogin');
+  await page.fill('#pl-email', 'hugo@example.com'); await page.fill('#pl-pass', 'mauvais'); await page.locator('#portalLogin .btn.pri').click();
+  await page.waitForSelector('#portalLogin + p.bad-t, #portalLogin ~ p.bad-t');
+  ok(/E-mail ou mot de passe incorrect/.test(await page.locator('#view').innerText()), 'a wrong portal password is explained');
+  await page.fill('#pl-email', 'hugo@example.com'); await page.fill('#pl-pass', 'bon-mot-de-passe'); await page.locator('#portalLogin .btn.pri').click();
+  await page.waitForSelector('[data-a="portalwho"]');
+  let pv = await page.locator('#view').innerText();
+  ok(/Connecté au portal en tant que Hugo/.test(pv) && /1 modèle active/.test(pv), 'the portal account is linked');
+  ok(/Reel playback hook/.test(pv) && /envoyé par Lucas/.test(pv) && /2 fichiers à regarder/.test(pv), 'what a model sent back is listed, with who asked for it');
+  ok(/Story coulisses/.test(pv) && /envoyé par toi/.test(pv) && /En retard/.test(pv) && !/Brouillon caché/.test(pv), 'sent requests are listed, late ones flagged, drafts left out');
+  ok(await page.locator('a.line[href="https://lvhcontentmanager.netlify.app/requests/11111111-1111-4111-8111-111111111111"]').count() >= 1, 'a request opens on its page in the portal');
+  await page.locator('[data-a="portalwho"]', { hasText: 'Lucas' }).click();
+  pv = await page.locator('.box', { hasText: 'Demandes envoyées' }).innerText();
+  ok(/Reel playback hook/.test(pv) && !/Story coulisses/.test(pv), 'requests can be filtered by who sent them');
+  await shot('9-portal-relie');
+  await page.evaluate(() => { location.hash = 'dashboard'; }); await page.waitForSelector('.pt-mini');
+  ok(/1\s*à valider/.test(await page.locator('.pt-mini').innerText()) && /Reel playback hook/.test(await page.locator('#view').innerText()), 'the dashboard shows what is waiting in the portal');
+  await page.reload(); await page.waitForSelector('.pt-mini');
+  ok(true, 'the link survives a reload');
+  await page.waitForFunction(() => !AOS.portalLink.busy && AOS.portalLink.state === 'on');
+  portal.role = 'creator'; await page.evaluate(() => AOS.portalRefresh()); await page.evaluate(() => { location.hash = 'portal'; }); await page.waitForSelector('#portalLogin');
+  ok(/n'est pas un compte manager/.test(await page.locator('#view').innerText()) && await page.evaluate(() => localStorage.getItem('lvh.portal.cache') === null), 'a model account is refused and nothing stays on the device');
+  portal.role = 'manager';
 
   /* every page of the menu renders without error */
   const keys = await page.evaluate(() => AOS.NAV_FLAT.filter(p => p.view).map(p => p.k));

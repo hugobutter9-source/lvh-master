@@ -8,8 +8,9 @@ exportée depuis l'ancien outil s'importe ici (Paramètres › Import / export).
 
 ## Ce qui a été ajouté par rapport à l'ancien outil
 
-- **Creator Portal** (menu Agence) : raccourcis vers chaque page du portal, et un bloc sur le dashboard.
-  Les chiffres du portal ne sont pas encore lus : c'est l'étape 2.
+- **Creator Portal** (menu Agence) : raccourcis vers chaque page du portal, et, une fois le compte manager du
+  portal relié, les demandes envoyées aux modèles (par soi et par les autres managers), ce qu'elles ont renvoyé
+  et ce qui est en retard. Le dashboard affiche ce qui attend une validation.
 - **Brief avant call** : le bouton « Brief » d'un call ressort les notes du dernier call avec la même
   personne, ce qu'il fallait aborder, la suite prévue, et pour un accompagnement la durée de la
   collaboration, la progression et le reste à payer.
@@ -60,6 +61,11 @@ Netlify : le dossier publié est `src/` (voir `netlify.toml`), sans étape de bu
 - Hors de claude.ai (Netlify, local) : dans le navigateur de l'appareil (`localStorage`). Rien n'est envoyé
   sur un serveur. Pense aux sauvegardes (Paramètres › Sauvegardes).
 - L'adresse du Creator Portal se règle sur la page Creator Portal.
+- Chaque personne a ses propres données (tâches, objectifs, finances…) sur son appareil. Ce qui est commun, ce sont
+  les données du Creator Portal : elles sont lues en direct avec le compte manager de la personne, et ce sont les
+  règles d'accès de la base du portal qui décident de ce qu'elle peut voir. L'adresse et la clé publique de cette
+  base sont dans `src/js/modules/portal.js` ; la clé est une clé publique, faite pour être dans le navigateur.
+- `src/js/vendor/` contient la bibliothèque Supabase (licence MIT), copiée telle quelle depuis npm.
 
 ## Organisation du code
 

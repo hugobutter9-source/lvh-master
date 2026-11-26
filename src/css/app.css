@@ -925,3 +925,15 @@ h1{font-size:clamp(30px,3.6vw,44px);font-weight:700;letter-spacing:-.04em}
 .fin-hit{position:absolute;top:0;bottom:0;width:16%;transform:translateX(-50%)}
 .oc.editing .oc-n{cursor:grab}
 .oc.editing .oc-n.dragging{cursor:grabbing}
+
+/* portal link: sign-in form and live figures */
+.pt-login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px}
+@media (max-width:620px){.pt-login{grid-template-columns:minmax(0,1fr)}}
+.pt-mini{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13.5px;margin-left:auto;flex-wrap:wrap}
+.pt-mini b{color:var(--fg);font-weight:700}
+.pt-mini b.warn-t{color:var(--warn)} .pt-mini b.bad-t{color:var(--bad)}
+.pt-mini i{width:3px;height:3px;border-radius:50%;background:var(--faint);margin:0 4px}
+.pt-strip.in{border-top:1px solid var(--line);padding:14px 24px}
+.box .box-h .chips{margin-left:auto}
+a.line>svg{color:var(--faint);flex:none}
+.hint svg{vertical-align:-2px}
