@@ -52,7 +52,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
     return json([]);
   };
   await page.route('https://togzyxnopontjwjkxcod.supabase.co/**', portalRoute);
-  await page.goto(base); await page.waitForSelector('.hero');
+  await page.goto(base); await page.waitForSelector('.d-today');
   ok(await page.title() === 'LVH Master', 'title is LVH Master');
   const man = await page.evaluate(async () => { const m = await (await fetch(document.querySelector('link[rel=manifest]').href)).json(); const sizes = []; for (const i of m.icons) { const r = await fetch(i.src); sizes.push(r.ok && r.headers.get('content-type') === 'image/png'); } return [m.display, m.icons.length, sizes.every(Boolean)]; });
   ok(man[0] === 'standalone' && man[1] === 3 && man[2], 'the app is installable: manifest and icons are served');
@@ -232,7 +232,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   const phoneCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: SHOTS ? 2 : 1, colorScheme: 'dark', isMobile: true, hasTouch: true });
   const phone = await phoneCtx.newPage(); phone.on('pageerror', e => errors.push('phone: ' + e.message));
   await phone.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); await phone.route('https://togzyxnopontjwjkxcod.supabase.co/**', portalRoute);
-  await phone.goto(base); await phone.waitForSelector('.hero');
+  await phone.goto(base); await phone.waitForSelector('.d-today');
   ok(await phone.evaluate(() => AOS.S.students.length === 0) && await phone.locator('.tabbar button').count() === 5, 'the phone starts empty and shows its tab bar');
   await phone.locator('.tabbar [data-a="menu"]').click(); await phone.locator('.syncbtn').click(); await phone.waitForSelector('#accountLogin');
   await phone.fill('#ac-email', 'hugo@example.com'); await phone.fill('#ac-pass', 'bon-mot-de-passe'); await phone.locator('#accountLogin .btn.pri').click();
@@ -251,7 +251,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal scroll on the phone dashboard');
   /* an installed phone app runs under the status bar (59px on recent iPhones): nothing may hide behind the top bar */
   await phone.evaluate(() => { document.documentElement.style.setProperty('--sat', '59px'); window.scrollTo(0, 0); }); await phone.waitForTimeout(100);
-  const geo = await phone.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { bar: r('.topbar'), hi: r('.wc-hi') }; });
+  const geo = await phone.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { bar: r('.topbar'), hi: r('.dh-hi') }; });
   const btnTop = await phone.evaluate(() => document.querySelector('.topbar .btn').getBoundingClientRect().top);
   ok(Math.round(geo.bar.top) === 0 && btnTop >= 59 && geo.hi.top >= geo.bar.bottom && Math.round(geo.bar.left) === 0 && Math.round(geo.bar.right) === 390, 'under a status bar, one strip covers the top edge to edge, its buttons sit below the status bar and the greeting below the strip');
   await phone.evaluate(() => window.scrollTo(0, 300)); await phone.waitForTimeout(100);
@@ -272,7 +272,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
     const saved = portal.crm; portal.crm = [];
     const mk = async (w, h) => { const cx = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: 'dark' }), pg = await cx.newPage();
       await pg.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); await pg.route('https://togzyxnopontjwjkxcod.supabase.co/**', portalRoute);
-      await pg.goto(base); await pg.waitForSelector('.hero'); return [cx, pg]; };
+      await pg.goto(base); await pg.waitForSelector('.d-today'); return [cx, pg]; };
     const signIn = async pg => { await pg.evaluate(() => AOS.act.account()); await pg.fill('#ac-email', 'hugo@example.com'); await pg.fill('#ac-pass', 'bon-mot-de-passe'); await pg.locator('#accountLogin .btn.pri').click();
       await pg.waitForFunction(() => AOS.sync.on() && !AOS.sync.busy && AOS.sync.pending() === 0 && AOS.sync.last > 0); };
     const [c1, emptyPhone] = await mk(390, 844); await signIn(emptyPhone);
@@ -305,7 +305,7 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(errors.length === 0, 'no JavaScript error on any of the ' + keys.length + ' pages' + (errors.length ? ' -> ' + errors.join(' | ') : ''));
 
   /* data survives a reload, and an older backup still imports */
-  await page.evaluate(() => { location.hash = 'dashboard'; }); await page.reload(); await page.waitForSelector('.hero');
+  await page.evaluate(() => { location.hash = 'dashboard'; }); await page.reload(); await page.waitForSelector('.d-today');
   ok(await page.evaluate(() => AOS.S.students.length === 1 && AOS.S.calls.length === 3), 'data is kept after a reload');
   ok(await page.evaluate(() => AOS.validateBackup({ app: 'agency-os', format: 1, schema: 5, data: {}, docs: {} }).errors.length === 0), 'a backup from the previous tool is accepted');
 

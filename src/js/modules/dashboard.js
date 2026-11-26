@@ -71,17 +71,6 @@
       .forEach(c => attn.push({ c: 'var(--violet)', t: `Notes à écrire : call du ${dShort(c.date)} avec ${c.title}`, a: 'callwrite', id: c.id }));
     const portalBox = AOS.portalBox ? AOS.portalBox() : '';
 
-    /* hero */
-    const hero = `<section class="hero card">
-      <div class="hero-main">
-        <div class="hero-n">${due}</div>
-        <div class="hero-l">${due ? `tâche${due > 1 ? 's' : ''} à faire aujourd'hui` : (doneToday ? 'tout est fait pour aujourd\'hui' : 'rien d\'urgent aujourd\'hui')}</div>
-        <div class="hero-dots"><span>${dot('var(--bad)')}<b>${late.length}</b> en retard</span><span>${dot('var(--warn)')}<b>${dToday.length}</b> pour aujourd'hui</span><span>${dot('var(--violet)')}<b>${evToday.length}</b> événement${evToday.length > 1 ? 's' : ''}</span></div>
-        <div class="hero-prog"><div class="hp-bar"><span style="width:${pct}%"></span></div><div class="hp-txt"><span>${doneToday} fait${doneToday > 1 ? 's' : ''} aujourd'hui</span><span>${pct} %</span></div></div>
-      </div>
-      ${AOS.modOn('taches') ? `<button class="btn glow" data-nav="taches">Voir mes tâches ${ic('chev', 15)}</button>` : ''}
-    </section>`;
-
     /* goals, always visible top-right */
     const goalsBox = (() => {
       if (!AOS.modOn('objectifs')) return '';
@@ -112,9 +101,16 @@
       return `<div class="line" data-edit="tasks:${x.id}">${canU ? `<button class="tick" data-a="toggletask" data-id="${x.id}" aria-label="Marquer comme faite"></button>` : '<span class="tick"></span>'}
         <span class="what"><span class="ttl">${esc(x.title)}${repTag(x)}</span><span class="sub">${[who, AOS.nm('creators', x.creatorId)].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</span></span>
         <span class="due ${dueCls(x.due)}">${esc(dueTxt(x.due) || (highK(x.priority) ? 'prioritaire' : ''))}</span></div>`; };
-    const tasks = AOS.modOn('taches') ? `<section class="card box"><div class="box-h"><span class="lbl">${dot('var(--warn)')}Mes tâches</span><button class="linkbtn" data-nav="taches">Toutes</button></div>
-      ${mine.length ? mine.map(tLine).join('') : '<div class="box-empty"><p>Aucune tâche urgente. Profite !</p></div>'}
-      ${AOS.allowed('tasks', 'c') ? `<form class="line add" id="quickTask">${ic('plus', 16)}<input id="qt" name="t" placeholder="Ajouter une tâche pour aujourd'hui…" autocomplete="off" aria-label="Nouvelle tâche"></form>` : ''}</section>` : '';
+    /* today: a ring for what is done, what is left, and the tasks themselves to tick, right at the top */
+    const ring = `<div class="ring" role="img" aria-label="${doneToday} faite${doneToday > 1 ? 's' : ''} sur ${total} aujourd'hui"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="r-bg" cx="50" cy="50" r="43"/>${pct ? `<circle class="r-fg" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="${pct} 100"/>` : ''}</svg><span class="ring-n">${due || (doneToday ? ic('ok', 34) : '0')}</span></div>`;
+    const todayCard = AOS.modOn('taches') ? `<section class="card d-today">
+      <div class="t-top">${ring}
+        <div class="t-sum"><h2>${due ? `tâche${due > 1 ? 's' : ''} à faire aujourd'hui` : (doneToday ? 'Tout est fait pour aujourd\'hui' : 'Rien d\'urgent aujourd\'hui')}</h2>
+          <div class="hero-dots"><span>${dot('var(--bad)')}<b>${late.length}</b> en retard</span><span>${dot('var(--warn)')}<b>${dToday.length}</b> pour aujourd'hui</span><span>${dot('var(--violet)')}<b>${evToday.length}</b> événement${evToday.length > 1 ? 's' : ''}</span></div>
+          <div class="t-done">${doneToday} fait${doneToday > 1 ? 's' : ''} aujourd'hui · ${pct} %</div></div>
+        <button class="btn sm t-all" data-nav="taches">Toutes ${ic('chev', 14)}</button></div>
+      <div class="t-list">${mine.length ? mine.slice(0, 5).map(tLine).join('') : '<div class="box-empty"><p>Aucune tâche urgente. Profite !</p></div>'}
+        ${AOS.allowed('tasks', 'c') ? `<form class="line add" id="quickTask">${ic('plus', 16)}<input id="qt" name="t" placeholder="Ajouter une tâche pour aujourd'hui…" autocomplete="off" aria-label="Nouvelle tâche"></form>` : ''}</div></section>` : '';
 
     /* one row of figures */
     const mk = t.slice(0, 7), rev = AOS.fin.rev(S, mk), prev = AOS.fin.rev(S, shiftMonth(mk, -1)), delta = prev ? Math.round((rev - prev) / prev * 100) : null;
@@ -139,13 +135,22 @@
     const stat = (v, l, sub = '', nav = '') => `<div class="st ${nav ? 'click' : ''}" ${nav ? `data-nav="${nav}"` : ''}><b>${v}</b><span>${l}</span>${sub ? `<small class="sub2">${sub}</small>` : ''}</div>`;
     const coachOn = AOS.modOn('accompagnement'), actSt = S.students.filter(x => AOS.kindOf(L, 'studentStages', x.stage) === 'active');
     const heads = actSt.reduce((n, x) => n + Math.max(1, Math.round(+x.people || 1)), 0), dueSt = S.students.reduce((n, x) => n + AOS.studentRest(x), 0);
-    const stats = `<section class="card stats">
-      ${canFin && finOn ? stat(eurK(AOS.fin.com(S, mk)), 'commission agence', `résultat net ${eurK(AOS.fin.com(S, mk) - AOS.fin.exp(S, mk))}`, 'finances') : canFin ? stat(eurK(rev), 'CA du mois', `commission ${eurK(AOS.fin.com(S, mk))}`, 'finances') : stat(ot.length, 'tâches ouvertes', '', 'taches')}
-      ${stat(active.length, `créatrice${active.length > 1 ? 's' : ''} active${active.length > 1 ? 's' : ''}`, team.length ? `équipe : ${team.filter(m => kindA(m) === 'available').length}/${team.length} disponible${team.filter(m => kindA(m) === 'available').length > 1 ? 's' : ''}` : '', 'creatrices')}
-      ${coachOn ? stat(actSt.length, `accompagnement${actSt.length > 1 ? 's' : ''} en cours`, `${heads} personne${heads > 1 ? 's' : ''}`, 'accompagnement') : stat(later.length + evToday.length, 'événements sur 7 jours', '', 'planning')}
-      ${coachOn && canFin ? stat(`<i class="${dueSt ? 'warn-t' : ''}">${eurK(dueSt)}</i>`, 'reste à encaisser', 'accompagnements', 'accompagnement') : stat(ot.length, 'tâches ouvertes', '', 'taches')}</section>`;
+    /* key figures: one bubble each, a tap opens the page behind it (a swipeable row on a phone) */
+    const kb = (icon, color, value, label, sub, nav) => `<button class="card kpi-b" data-nav="${nav}"><span class="kb-ic" style="--c:${color}">${ic(icon, 17)}</span><b>${value}</b><span class="kb-l">${label}</span>${sub ? `<small>${sub}</small>` : ''}</button>`;
+    const PF = AOS.portalLink && AOS.portalLink.state === 'on' && AOS.portalFigures ? AOS.portalFigures() : null;
+    const com = canFin ? AOS.fin.com(S, mk) : 0, avail = team.filter(m => kindA(m) === 'available').length;
+    const callsWeek = S.calls.filter(c => AOS.kindOf(L, 'callStatus', c.status) === 'planned' && c.date >= t && c.date <= addDays(t, 7)).length;
+    const kpis = [
+      canFin ? kb('euro', 'var(--ok)', eurK(rev), 'CA du mois', delta === null ? '' : `<i class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} %</i> vs mois dernier`, 'finances') : kb('task', 'var(--info)', ot.length, 'tâches ouvertes', '', 'taches'),
+      AOS.modOn('portal') ? (PF ? kb('film', 'var(--violet)', PF.review.length, 'à valider dans le portal', `${PF.open.length} en cours · ${PF.late.length} en retard`, 'portal') : kb('film', 'var(--violet)', '—', 'Creator Portal', 'Relier mon compte', 'portal')) : '',
+      coachOn && canFin ? kb('grad', 'var(--warn)', eurK(dueSt), 'reste à encaisser', `${actSt.length} accompagnement${actSt.length > 1 ? 's' : ''} · ${heads} pers.`, 'accompagnement') : coachOn ? kb('grad', 'var(--warn)', actSt.length, `accompagnement${actSt.length > 1 ? 's' : ''} en cours`, `${heads} personne${heads > 1 ? 's' : ''}`, 'accompagnement') : '',
+      AOS.modOn('creatrices') ? kb('star', 'var(--pink)', active.length, `créatrice${active.length > 1 ? 's' : ''} active${active.length > 1 ? 's' : ''}`, team.length ? `équipe : ${avail}/${team.length} disponible${avail > 1 ? 's' : ''}` : '', 'creatrices') : '',
+      AOS.modOn('calls') ? kb('phone', 'var(--info)', callsWeek, `call${callsWeek > 1 ? 's' : ''} sur 7 jours`, '', 'calls') : '',
+      canFin ? kb('wallet', 'var(--accent)', eurK(com), 'commission agence', `net ${eurK(com - AOS.fin.exp(S, mk))}`, 'finances') : kb('cal', 'var(--accent)', later.length + evToday.length, 'événements sur 7 jours', '', 'planning')
+    ].filter(Boolean);
+    const kpiBox = `<section class="kpis" aria-label="Chiffres clés">${kpis.join('')}</section>`;
 
-    const attnBox = attn.length ? `<section class="card box"><div class="box-h"><span class="lbl">${dot('var(--warn)')}À surveiller</span></div>
+    const attnBox = attn.length ? `<section class="card box attn"><div class="box-h"><span class="lbl">${dot('var(--warn)')}À surveiller</span></div>
       ${attn.slice(0, 5).map(a => `<button class="line" ${a.a ? `data-a="${a.a}" data-id="${a.id}"` : `data-open="${a.open}"`}>${dot(a.c)}<span class="what"><span class="ttl">${esc(a.t)}</span></span>${ic('chev', 15)}</button>`).join('')}</section>` : '';
 
     const empty = !['creators', 'team', 'tasks', 'events'].some(c => S[c].length);
@@ -153,12 +158,13 @@
     const mood = late.length ? { c: 'var(--warn)', t: `${late.length} tâche${late.length > 1 ? 's' : ''} en retard` }
       : dToday.length ? { c: 'var(--accent)', t: `${dToday.length} tâche${dToday.length > 1 ? 's' : ''} pour aujourd'hui` }
       : { c: 'var(--ok)', t: "Tout est à jour aujourd'hui." };
-    return (showClock ? AOS.header({ bare: true }) + AOS.clockHtml({ title: `${hi}${owner}.`, mood, date: AOS.cap(dLong(t)) })
-      : AOS.header({ eyebrow: AOS.cap(dLong(t)), title: `${hi}${owner}.` })) +
+    /* greeting on the left, the clock beside it: the first screen already shows the day */
+    const head = AOS.header({ bare: true }) + `<section class="dash-head" aria-label="Accueil"><div class="dh-txt"><span class="dh-date">${esc(AOS.cap(dLong(t)))}</span><h1 class="dh-hi">${hi}${owner}.</h1>
+      <button class="wc-mood" data-nav="taches"><span class="wc-dot" style="background:${mood.c}"></span>${esc(mood.t)}</button></div>${showClock && AOS.clockCards ? AOS.clockCards() : ''}</section>`;
+    /* every block grows to fill its row: no hole whatever the mix of blocks or the width of the screen */
+    return head +
       (empty ? `<section class="card box"><div class="box-empty"><p><b>Bienvenue !</b> Ajoute ton équipe et tes créatrices pour commencer.</p><div class="actions center">${AOS.newBtn('team', 'Ajouter un collaborateur')}${AOS.newBtn('creators', 'Ajouter une créatrice', 1)}</div></div></section>` : '') +
-      `<div class="dash-top">${hero}${goalsBox}</div>
-      <div class="grid g2 top">${planning}${tasks}</div>
-      ${attnBox}${finCard}${stats}${portalBox}`;
+      `<div class="dash">${todayCard}${kpiBox}${planning}${goalsBox}${attnBox}${finCard}${portalBox}</div>`;
   };
   /* revenue of a créatrice over the last 30 days against the 30 days before */
   AOS.creatorTrend = function (id) {

@@ -171,6 +171,8 @@
     $('#side').classList.remove('open');
     AOS.routeHooks.forEach(f => f(view));
     render(); g.scrollTo(0, 0);
+    /* a page change eases in; a refresh of the same page (new data) does not replay it */
+    const v = $('#view'); v.classList.remove('enter'); void v.offsetWidth; v.classList.add('enter'); clearTimeout(route.t); route.t = setTimeout(() => v.classList.remove('enter'), 900);
   }
 
   /* ---------- global events ---------- */
@@ -234,6 +236,9 @@
     if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-open][tabindex]')) e.target.click();
   });
   g.addEventListener('hashchange', route);
+  /* the phone top bar is see-through at the top of a page and turns to frosted glass once the page moves under it */
+  const onScroll = () => document.documentElement.classList.toggle('scrolled', g.scrollY > 6);
+  g.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
   /* ---------- boot ---------- */
   AOS.onChange(() => render());

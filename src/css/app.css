@@ -34,7 +34,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 /* installed on a phone, the page runs under the status bar: the content starts below it */
-:root{--sat:env(safe-area-inset-top,0px)}
+:root{--sat:env(safe-area-inset-top,0px);--gut:clamp(16px,2.2vw,34px)}   /* --gut: the page gutter, wider on a wide screen */
 html{padding-top:var(--sat)}
 html,body{height:100%}
 body{margin:0}   /* the browser's default 8px margin shifted the whole app when it runs on its own site */
@@ -110,8 +110,8 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .app.mini .nav .badge{position:absolute;margin:0;transform:translate(12px,-10px);min-width:16px;height:16px;font-size:10px}
 .app.mini .nav{position:relative}
 
-.main{min-width:0;padding-block:30px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.main{min-width:0;padding-block:30px 80px;padding-left:max(var(--gut),env(safe-area-inset-left,0px));padding-right:max(var(--gut),env(safe-area-inset-right,0px))}
+.wrap{max-width:1640px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
 .topbar{display:none}
 
 /* header */
@@ -1033,11 +1033,108 @@ a.line>svg{color:var(--faint);flex:none}
    It is the bar itself, stretched to the screen edges with margins that mirror the page gutter: nothing
    sticks out of the page, so the page cannot be dragged sideways. */
 @media (max-width:900px){
-  .topbar{top:0;margin:calc(-22px - var(--sat)) calc(-1 * max(16px,env(safe-area-inset-right,0px))) 0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));
-    padding:calc(12px + var(--sat)) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px))}
+  .topbar{top:0;margin:calc(-22px - var(--sat)) calc(-1 * max(var(--gut),env(safe-area-inset-right,0px))) 0 calc(-1 * max(var(--gut),env(safe-area-inset-left,0px)));
+    padding:calc(12px + var(--sat)) max(var(--gut),env(safe-area-inset-right,0px)) 12px max(var(--gut),env(safe-area-inset-left,0px))}
   body::before{display:none}
   [data-style="bubble"] .topbar{background:color-mix(in srgb,var(--bg) 60%,transparent);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 }
 /* safety net: whatever a page contains, the app never scrolls sideways */
 html{overflow-x:hidden}
 @media (max-width:900px){.main{padding-top:22px}}   /* the top bar sits flush under the status bar: no sliver of page above it */
+
+/* ============================================================================
+   Home page: greeting + clock, then blocks that always fill their row.
+   ============================================================================ */
+.dash-head{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:6px 2px 4px}
+.dh-txt{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.dh-date{color:var(--muted);font-size:14.5px;font-weight:500}
+.dh-hi{margin:0;font-size:clamp(34px,4.4vw,60px);font-weight:700;letter-spacing:-.045em;line-height:1.02}
+.dash-head .wc-mood{margin:2px 0 0 -10px;font-size:15.5px}
+.dash-head .flipclock{--fw:clamp(72px,7.4vw,112px)}
+.dash-head .fc-zone{font-size:13px}
+.dash{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
+.dash>*{flex:1 1 330px;min-width:0}
+.dash>.d-today,.dash>.fin{flex:2.1 1 560px}
+.dash>.pt-strip{align-content:flex-start}
+/* today */
+.d-today{display:flex;flex-direction:column;overflow:hidden}
+.t-top{display:flex;align-items:center;gap:22px;padding:24px 26px 18px}
+.t-sum{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.t-sum h2{margin:0;font-size:clamp(19px,1.7vw,24px);font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.t-sum .hero-dots{margin:0;gap:6px 18px;font-size:14px}
+.t-done{color:var(--faint);font-size:13px}
+.t-all{align-self:flex-start;flex:none}
+.t-list{display:flex;flex-direction:column;border-top:1px solid var(--line);flex:1}
+.t-list .line:first-child{border-top:0}
+.ring{position:relative;width:104px;height:104px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}
+.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+.r-bg{stroke:color-mix(in srgb,var(--fg) 10%,transparent)}
+.r-fg{stroke:var(--accent)}
+.ring-n{position:absolute;inset:0;display:grid;place-items:center;font-size:38px;font-weight:700;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.ring-n svg{transform:none;width:34px;height:34px;color:var(--ok)}
+/* key figures */
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:stretch}
+.kpi-b{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:16px 18px;text-align:left;border-radius:var(--r);cursor:pointer;min-width:0;transition:transform .16s cubic-bezier(.2,.8,.2,1),background .16s}
+.kpi-b:hover{transform:translateY(-2px)}
+.kpi-b:active{transform:scale(.97)}
+.kpi-b:last-child:nth-child(odd){grid-column:1/-1}
+.kb-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;margin-bottom:8px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.kpi-b b{font-size:26px;font-weight:700;letter-spacing:-.035em;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi-b .kb-l{color:var(--muted);font-size:13.5px}
+.kpi-b small{color:var(--faint);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.kpi-b small i{font-style:normal;font-weight:600}
+.card.kpi-b{font:inherit;color:inherit}
+/* page changes ease in */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#view.enter>*{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+#view.enter>*:nth-child(2){animation-delay:.04s} #view.enter>*:nth-child(3){animation-delay:.08s} #view.enter>*:nth-child(4){animation-delay:.12s} #view.enter>*:nth-child(n+5){animation-delay:.16s}
+#view.enter .dash>*{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+#view.enter .dash>*:nth-child(1){animation-delay:.06s} #view.enter .dash>*:nth-child(2){animation-delay:.11s} #view.enter .dash>*:nth-child(3){animation-delay:.16s} #view.enter .dash>*:nth-child(4){animation-delay:.21s} #view.enter .dash>*:nth-child(n+5){animation-delay:.26s}
+#view.enter>.topbar{animation:none}
+.line,.btn,.chip,.nav,.tabbar button{-webkit-tap-highlight-color:transparent}
+.tabbar button:active,.line:active{opacity:.7}
+
+@media (max-width:900px){
+  /* the top bar blends into the page at the top, and frosts over once the page scrolls under it */
+  [data-style] .topbar{background:none;border-bottom-color:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;transition:background .25s,border-color .25s}
+  html.scrolled .topbar{background:color-mix(in srgb,var(--bg) 64%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border-bottom-color:var(--line)}
+}
+@media (max-width:620px){
+  .dash-head{flex-wrap:nowrap;align-items:flex-end;gap:12px;padding-top:2px}
+  .dh-hi{font-size:clamp(30px,9vw,38px)}
+  .dash-head .flipclock{--fw:52px;gap:6px;flex:none;margin-bottom:6px}
+  .dash-head .fc-zone{display:none}
+  .dash-head .wc-mood{font-size:14.5px;text-align:left}
+  .dash{gap:14px}
+  .dash>*{flex-basis:100%}
+  .t-top{padding:20px 20px 16px;gap:16px;flex-wrap:wrap}
+  .ring{width:84px;height:84px} .ring-n{font-size:31px}
+  .t-all{position:absolute;right:16px;top:16px}
+  .d-today{position:relative}
+  .t-sum h2{padding-right:74px}
+  /* the key figures become one row to swipe, bubble by bubble */
+  .kpis{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:12px;
+    margin-inline:calc(-1 * max(var(--gut),env(safe-area-inset-left,0px)));padding:2px max(var(--gut),env(safe-area-inset-left,0px)) 6px;scroll-padding-inline:max(var(--gut),env(safe-area-inset-left,0px))}
+  .kpis::-webkit-scrollbar{display:none}
+  .kpi-b{flex:0 0 46%;scroll-snap-align:start}
+  .kpi-b:last-child:nth-child(odd){grid-column:auto}
+}
+
+/* home page, second pass: the key figures run across the top on a wide screen; things to watch read in full */
+@media (min-width:621px){
+  .dash>.kpis{order:-1;flex:1 1 100%;grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+  .dash>.kpis .kpi-b:last-child:nth-child(odd){grid-column:auto}
+  .dash>.box:not(.attn):not(.goalbox){flex:1.25 1 400px}
+}
+.attn .line .ttl{white-space:normal;overflow:visible;text-overflow:clip;font-size:15px;line-height:1.35}
+.attn .line{align-items:flex-start}
+.attn .line>.dot{margin-top:8px}
+.attn .line>svg{margin-top:3px;flex:none;color:var(--faint)}
+@media (max-width:620px){
+  .t-all{display:none}
+  .t-sum{display:contents}
+  .t-sum h2{flex:1;min-width:0;padding-right:0;font-size:20px}
+  .t-sum .hero-dots{flex-basis:100%;order:3;gap:6px 16px;font-size:14px}
+  .t-done{flex-basis:100%;order:4;margin-top:-6px}
+}

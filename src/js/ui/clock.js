@@ -5,6 +5,8 @@
   const card = id => `<div class="flip" id="${id}"><span class="fl fl-u"></span><span class="fl fl-l"></span><i class="hinge l"></i><i class="hinge r"></i></div>`;
   const zone = () => { try { return (new Intl.DateTimeFormat('fr-FR', { timeZoneName: 'short' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName') || {}).value || ''; } catch (e) { return ''; } };
 
+  /* the clock alone (two cards), for a page that lays out its own greeting */
+  AOS.clockCards = () => `<div class="flipclock" role="timer" aria-live="off" aria-label="Heure"><span id="flipTxt" class="sr"></span>${card('flipH')}<span class="fc-colon" aria-hidden="true"><i></i><i></i></span>${card('flipM')}<span class="fc-zone" id="flipZ">${esc(zone())}</span></div>`;
   AOS.clockHtml = function ({ title, mood, date }) {
     return `<section class="welcome" aria-label="Accueil">
       <div class="wc-act"><button class="iconbtn" data-nav="param-apparence" title="Modifier l'horloge" aria-label="Modifier l'horloge">${ic('pen', 16)}</button></div>
