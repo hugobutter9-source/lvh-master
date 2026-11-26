@@ -117,7 +117,8 @@
         <section class="card pad stack"><h3 class="h3">Nom et logo</h3>
           <div class="form2"><div class="fld"><label for="apName">Nom de l'app</label><input id="apName" value="${esc(p.appName)}" placeholder="LVH Master" maxlength="30"></div>
           <div class="fld"><label for="apLogo">Lettres du logo</label><input id="apLogo" value="${esc(p.logo)}" placeholder="${esc(AOS.ini(S.settings.name || 'AO'))}" maxlength="3"></div></div></section>
-        <section class="card pad stack"><h3 class="h3">Horloge de l'accueil</h3><p class="muted small">L'horloge à palettes sous le « Bonjour » en haut du dashboard.</p>${seg('clock', [['true', 'Affichée'], ['false', 'Masquée']])}</section>
+        <section class="card pad stack"><div class="row-between"><h3 class="h3">Horloge de l'accueil</h3>${seg('clock', [['true', 'Affichée'], ['false', 'Masquée']])}</div>
+          <div class="ck-pick">${AOS.CLOCK_STYLES.map(([k, l]) => `<button class="ck-tile ${AOS.clockStyle() === k ? 'on' : ''}" data-a="ap" data-k="clockStyle" data-v="${k}" aria-pressed="${AOS.clockStyle() === k}"><span class="ck-prev">${AOS.clockPreview(k)}</span><span>${l}</span></button>`).join('')}</div></section>
         <section class="card pad stack"><h3 class="h3">Barre latérale</h3>${seg('sideMini', [['false', 'Dépliée'], ['true', 'Repliée (icônes)']])}</section>
         <section class="card pad stack"><h3 class="h3">Couleurs des statuts</h3><p class="muted small">Statuts des créatrices, tâches, disponibilités, catégories de scripts… : nom et couleur dans Paramètres › Personnalisation.</p><div><button class="btn sm" data-nav="param-perso">Ouvrir Personnalisation</button></div></section>
       </div></div>`;

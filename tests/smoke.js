@@ -299,6 +299,37 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(/n'est pas un compte manager/.test(await page.locator('#view').innerText()) && await page.evaluate(() => localStorage.getItem('lvh.portal.cache') === null), 'a model account is refused and nothing stays on the device');
   portal.role = 'manager';
 
+  /* clock styles: nine to pick from, each one renders and keeps time */
+  await page.evaluate(() => { location.hash = 'param-apparence'; }); await page.waitForSelector('.ck-pick');
+  ok(await page.locator('.ck-tile').count() === 9 && await page.locator('.ck-tile.on').count() === 1, 'nine clock styles are offered');
+  await shot('12-horloges');
+  const clockOk = [];
+  for (const k of await page.evaluate(() => AOS.CLOCK_STYLES.map(x => x[0]))) {
+    await page.evaluate(v => AOS.savePrefs({ clockStyle: v }), k); await page.evaluate(() => { location.hash = 'dashboard'; }); await page.waitForSelector('.dash-head .flipclock, .dash-head .ck');
+    await page.waitForTimeout(60);
+    /* the time and what the clock shows are read in one go, right after a tick, so a minute cannot pass in between */
+    const [now, got] = await page.evaluate(() => { AOS.clockTick(); const d = new Date(), two = n => String(n).padStart(2, '0'), q = s => document.querySelector(s);
+      return [[two(d.getHours()), two(d.getMinutes()), AOS.timeWords(d.getHours(), d.getMinutes())], { cls: (q('.dash-head .flipclock') || q('.dash-head .ck')).className, h: q('#flipH') && q('#flipH').dataset.v, m: q('#flipM') && q('#flipM').dataset.v, t: q('#ckT') && q('#ckT').textContent, w: q('#ckW') && q('#ckW').textContent, hand: q('#ckMh') && q('#ckMh').getAttribute('transform') }]; });
+    const good = got.h ? (got.h === now[0] && got.m === now[1]) : got.w ? got.w === now[2] : got.t === now[0] + ':' + now[1];
+    if (!good) clockOk.push(k + ' ' + JSON.stringify(got));
+    if (k === 'aiguilles' && !/rotate\(/.test(got.hand || '')) clockOk.push('aiguilles sans aiguilles');
+    if (SHOTS && ['palettes', 'aiguilles', 'lettres'].includes(k)) await page.screenshot({ path: path.join(SHOTS, '13-horloge-' + k + '.png'), clip: { x: 258, y: 0, width: 1182, height: 260 } });
+  }
+  ok(clockOk.length === 0, 'each clock style shows the right time' + (clockOk.length ? ' -> ' + clockOk.join(' | ') : ''));
+  ok(await page.evaluate(() => AOS.timeWords(21, 18) === 'vingt et une heures dix-huit' && AOS.timeWords(0, 5) === 'minuit cinq' && AOS.timeWords(12, 0) === 'midi' && AOS.timeWords(1, 31) === 'une heure trente et une'), 'the time in words is written correctly');
+  await page.evaluate(() => AOS.savePrefs({ clockStyle: undefined }));
+
+  /* a window wider than the screen: the app lays itself out for the visible part */
+  {
+    const cx = await browser.newContext({ viewport: { width: 1800, height: 900 }, colorScheme: 'dark' }), pg = await cx.newPage();
+    await pg.addInitScript(() => { Object.defineProperty(window, 'outerWidth', { get: () => 1800 }); Object.defineProperty(window, 'screenX', { get: () => 0 }); Object.defineProperty(screen, 'availWidth', { get: () => 1720 }); Object.defineProperty(screen, 'availLeft', { get: () => 0 }); });
+    await pg.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); await pg.route('https://togzyxnopontjwjkxcod.supabase.co/**', r => r.abort());
+    await pg.goto(base); await pg.waitForSelector('.d-today');
+    const fit = await pg.evaluate(() => ({ app: Math.round(document.querySelector('.app').getBoundingClientRect().right), far: Math.max(...[...document.querySelectorAll('#view *')].map(e => e.getBoundingClientRect().right)) }));
+    ok(fit.app === 1720 && fit.far <= 1720, 'when the window hangs off a 1720px screen, everything stays within 1720px (app ' + fit.app + ', furthest ' + Math.round(fit.far) + ')');
+    await cx.close();
+  }
+
   /* every page of the menu renders without error */
   const keys = await page.evaluate(() => AOS.NAV_FLAT.filter(p => p.view).map(p => p.k));
   for (const k of keys) { await page.evaluate(h => { location.hash = h; }, k); await page.waitForTimeout(60); if (/Cette page a rencontré une erreur/.test(await page.locator('#view').innerText())) errors.push('view ' + k); }

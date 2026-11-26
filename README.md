@@ -42,6 +42,11 @@ exportée depuis l'ancien outil s'importe ici (Paramètres › Import / export).
   hors ligne et envoie les changements au retour de la connexion. Par fiche, la dernière écriture arrivée gagne.
 - **Téléphone** : barre d'onglets en bas (Accueil, Tâches, +, Portal, Menu).
 
+- **Horloge de l'accueil** : neuf styles au choix dans Paramètres › Apparence (bulles, palettes, chiffres, néon,
+  digitale avec secondes, aiguilles, anneau de la journée, en lettres, discrète).
+- **Fenêtre plus large que l'écran** : si la fenêtre de l'app dépasse du bord droit de l'écran, la page se met en
+  page pour la partie visible au lieu d'être coupée.
+
 ## Lancer en local
 
 Aucune installation : c'est un site statique.

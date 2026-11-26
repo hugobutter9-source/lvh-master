@@ -203,7 +203,7 @@
   }
   AOS.afterRender.dashboard = () => {
     wireFin();
-    if (AOS.startClock && document.getElementById('flipH')) AOS.startClock();
+    if (AOS.startClock && document.querySelector('#view .flipclock, #view .ck')) AOS.startClock();
     const f = document.getElementById('quickTask'); if (!f) return;
     f.onsubmit = async e => {
       e.preventDefault(); const v = f.t.value.trim(); if (!v) return;

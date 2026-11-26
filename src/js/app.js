@@ -237,6 +237,16 @@
   });
   g.addEventListener('hashchange', route);
   /* the phone top bar is see-through at the top of a page and turns to frosted glass once the page moves under it */
+  /* a window that hangs off the right edge of the screen (its size was kept from a larger display): the page is
+     laid out for the whole window, so its right part is out of sight. Lay it out for the visible part instead. */
+  function fitWindow() {
+    const sc = g.screen || {}, left = typeof g.screenX === 'number' ? g.screenX : 0, al = sc.availLeft || 0;
+    let fit = 'none';
+    if (sc.availWidth && g.outerWidth && left >= al) { const visible = al + sc.availWidth - left - Math.max(0, g.outerWidth - g.innerWidth); if (visible > 640 && g.innerWidth - visible > 6) fit = Math.floor(visible) + 'px'; }
+    if (fitWindow.v !== fit) { fitWindow.v = fit; document.documentElement.style.setProperty('--fit', fit); }
+  }
+  AOS.fitWindow = fitWindow;
+  fitWindow(); g.addEventListener('resize', fitWindow); g.addEventListener('focus', fitWindow); setInterval(fitWindow, 2500);
   const onScroll = () => document.documentElement.classList.toggle('scrolled', g.scrollY > 6);
   g.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
