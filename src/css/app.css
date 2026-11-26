@@ -1029,12 +1029,15 @@ a.line>svg{color:var(--faint);flex:none}
 .style-prev.mono b{position:absolute;left:16px;right:16px;bottom:14px;height:34px;border-radius:10px;background:#141416}
 .style-prev.mono::after{content:"";position:absolute;right:26px;bottom:22px;width:54px;height:18px;border-radius:999px;background:#fff}
 
-/* bubble look on a phone: the top bar is a strip of frosted glass across the whole screen, not a dark block */
+/* phone: one top strip from the very top of the screen (under the status bar) to the bottom of the bar.
+   It is the bar itself, stretched to the screen edges with margins that mirror the page gutter: nothing
+   sticks out of the page, so the page cannot be dragged sideways. */
 @media (max-width:900px){
-  [data-style="bubble"] .main{overflow-x:clip}
-  [data-style="bubble"] .topbar{background:none;border-bottom-color:transparent;isolation:isolate}
-  [data-style="bubble"] .topbar::before{content:"";position:absolute;inset:0 -50vw;z-index:-1;border-bottom:1px solid var(--line);
-    background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-  [data-style="bubble"] body::before{background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+  .topbar{top:0;margin:calc(-22px - var(--sat)) calc(-1 * max(16px,env(safe-area-inset-right,0px))) 0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));
+    padding:calc(12px + var(--sat)) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px))}
+  body::before{display:none}
+  [data-style="bubble"] .topbar{background:color-mix(in srgb,var(--bg) 60%,transparent);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 }
+/* safety net: whatever a page contains, the app never scrolls sideways */
+html{overflow-x:hidden}
 @media (max-width:900px){.main{padding-top:22px}}   /* the top bar sits flush under the status bar: no sliver of page above it */

@@ -252,11 +252,18 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   /* an installed phone app runs under the status bar (59px on recent iPhones): nothing may hide behind the top bar */
   await phone.evaluate(() => { document.documentElement.style.setProperty('--sat', '59px'); window.scrollTo(0, 0); }); await phone.waitForTimeout(100);
   const geo = await phone.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { bar: r('.topbar'), hi: r('.wc-hi') }; });
-  ok(geo.bar.top >= 59 && geo.hi.top >= geo.bar.bottom, 'under a status bar, the greeting starts below the top bar (bar ' + Math.round(geo.bar.top) + '–' + Math.round(geo.bar.bottom) + ', greeting from ' + Math.round(geo.hi.top) + ')');
+  const btnTop = await phone.evaluate(() => document.querySelector('.topbar .btn').getBoundingClientRect().top);
+  ok(Math.round(geo.bar.top) === 0 && btnTop >= 59 && geo.hi.top >= geo.bar.bottom && Math.round(geo.bar.left) === 0 && Math.round(geo.bar.right) === 390, 'under a status bar, one strip covers the top edge to edge, its buttons sit below the status bar and the greeting below the strip');
   await phone.evaluate(() => window.scrollTo(0, 300)); await phone.waitForTimeout(100);
-  ok(await phone.evaluate(() => Math.round(document.querySelector('.topbar').getBoundingClientRect().top) === 59), 'the top bar stays just under the status bar while scrolling');
+  ok(await phone.evaluate(() => Math.round(document.querySelector('.topbar').getBoundingClientRect().top) === 0 && document.querySelector('.topbar .btn').getBoundingClientRect().top >= 59), 'the top strip stays in place while scrolling');
   await phone.evaluate(() => window.scrollTo(0, 0));
   if (SHOTS) await phone.screenshot({ path: path.join(SHOTS, '10-telephone.png') });
+  /* nothing may stick out sideways on any page, measured with every clipping switched off (an older phone ignores it) */
+  await phone.addStyleTag({ content: 'html,body,.main{overflow-x:visible!important}' });
+  const wide = [];
+  for (const k of await phone.evaluate(() => AOS.NAV_FLAT.filter(n => n.view).map(n => n.k))) { await phone.evaluate(h => { location.hash = h; }, k); await phone.waitForTimeout(80);
+    const w = await phone.evaluate(() => document.documentElement.scrollWidth); if (w > 391) wide.push(k + ' (' + w + 'px)'); }
+  ok(wide.length === 0, 'on a 390px phone no page is wider than the screen' + (wide.length ? ' -> ' + wide.join(', ') : ''));
   await phoneCtx.close();
 
   /* the real-life order: an empty phone signs in first, then the computer that holds the data.
