@@ -33,6 +33,12 @@ exportée depuis l'ancien outil s'importe ici (Paramètres › Import / export).
 - **Créatrices** : courbe du CA sur 6 mois dans la fiche, et alerte sur le dashboard quand le CA des 30 derniers
   jours baisse de 15 % ou plus par rapport aux 30 jours précédents.
 
+- **Synchronisation entre ses appareils** : après connexion avec son compte manager du portal (bouton d'état en bas
+  du menu), les données du tableau de bord sont aussi enregistrées en ligne, dans des lignes que seule la personne
+  peut lire (`crm_records`, migration dans le dépôt du portal). L'appareil reste la copie de travail : l'app marche
+  hors ligne et envoie les changements au retour de la connexion. Par fiche, la dernière écriture arrivée gagne.
+- **Téléphone** : barre d'onglets en bas (Accueil, Tâches, +, Portal, Menu).
+
 ## Lancer en local
 
 Aucune installation : c'est un site statique.

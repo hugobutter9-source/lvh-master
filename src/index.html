@@ -23,6 +23,8 @@
 <div class="app">
   <aside class="side" id="side" aria-label="Barre latérale"></aside>
   <main class="main"><div class="wrap" id="view"></div></main>
+  <!-- phone tab bar: inside .app so the open side menu, drawers and windows sit above it -->
+  <nav class="tabbar" id="tabbar" aria-label="Navigation rapide"></nav>
 </div>
 <div id="layer"></div>
 <!-- file pickers live outside the re-rendered view so a refresh never drops a selection -->
@@ -48,6 +50,7 @@
 <script src="js/modules/students.js"></script>
 <script src="js/vendor/supabase.js"></script>
 <script src="js/modules/portal.js"></script>
+<script src="js/core/sync.js"></script>
 <script src="js/modules/templates.js"></script>
 <script src="js/modules/org.js"></script>
 <script src="js/modules/myday.js"></script>

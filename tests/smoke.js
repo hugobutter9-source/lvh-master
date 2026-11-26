@@ -31,7 +31,8 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
       { id: '33333333-3333-4333-8333-333333333333', title: 'TikTok trend', status: 'approved', platform: 'tiktok', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(6), updated_at: dAgo(1), submitted_at: dAgo(2), approved_at: dAgo(1) },
       { id: '44444444-4444-4444-8444-444444444444', title: 'Brouillon caché', status: 'draft', platform: 'instagram', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(1), updated_at: dAgo(1), submitted_at: null, approved_at: null }],
     media: [{ id: 'm1', request_id: '11111111-1111-4111-8111-111111111111', creator_id: 'c-jade', kind: 'video', review_state: 'pending', created_at: dAgo(0.2) }, { id: 'm2', request_id: '11111111-1111-4111-8111-111111111111', creator_id: 'c-jade', kind: 'video', review_state: 'pending', created_at: dAgo(0.2) }] };
-  await page.route('https://togzyxnopontjwjkxcod.supabase.co/**', async route => {
+  let tick = 0; portal.crm = [];
+  const portalRoute = async route => {
     const req = route.request(), url = new URL(req.url()), cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
     const json = (body, status = 200) => route.fulfill({ status, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
@@ -43,8 +44,14 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
     if (url.pathname === '/rest/v1/profiles') return (req.headers().accept || '').includes('vnd.pgrst.object') ? json({ ...portal.people[0], role: portal.role }) : json(portal.people);
     if (url.pathname === '/rest/v1/content_requests') return json(portal.requests.filter(r => r.status !== 'archived'));
     if (url.pathname === '/rest/v1/media_assets') return json(portal.media);
+    if (url.pathname === '/rest/v1/crm_records' && req.method() === 'POST') {   // upsert: the server stamps the time, like the real trigger
+      for (const r of req.postDataJSON()) { const i = portal.crm.findIndex(x => x.user_id === r.user_id && x.col === r.col && x.id === r.id), row = { ...r, updated_at: new Date(Date.now() + (++tick)).toISOString() }; i >= 0 ? portal.crm[i] = row : portal.crm.push(row); }
+      return route.fulfill({ status: 201, headers: cors, body: '' }); }
+    if (url.pathname === '/rest/v1/crm_records') { const q = url.searchParams, since = (q.get('updated_at') || '').replace(/^gt\./, ''), me = (q.get('user_id') || '').replace(/^eq\./, '');
+      return json(portal.crm.filter(r => r.user_id === me && (!since || r.updated_at > since)).sort((a, b) => a.updated_at.localeCompare(b.updated_at)).slice(0, +(q.get('limit') || 500))); }
     return json([]);
-  });
+  };
+  await page.route('https://togzyxnopontjwjkxcod.supabase.co/**', portalRoute);
   await page.goto(base); await page.waitForSelector('.hero');
   ok(await page.title() === 'LVH Master', 'title is LVH Master');
   const man = await page.evaluate(async () => { const m = await (await fetch(document.querySelector('link[rel=manifest]').href)).json(); const sizes = []; for (const i of m.icons) { const r = await fetch(i.src); sizes.push(r.ok && r.headers.get('content-type') === 'image/png'); } return [m.display, m.icons.length, sizes.every(Boolean)]; });
@@ -209,6 +216,33 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(/1\s*à valider/.test(await page.locator('.pt-mini').innerText()) && /Reel playback hook/.test(await page.locator('#view').innerText()), 'the dashboard shows what is waiting in the portal');
   await page.reload(); await page.waitForSelector('.pt-mini');
   ok(true, 'the link survives a reload');
+  /* sync between the person's own devices: the computer sends everything, a phone signs in and finds it */
+  await page.waitForFunction(() => AOS.sync.on() && !AOS.sync.busy && AOS.sync.pending() === 0 && AOS.sync.last > 0);
+  ok(portal.crm.some(r => r.col === 'students' && r.data.name === 'Camille Test') && portal.crm.some(r => r.col === '_doc' && r.id === 'settings_agency') && portal.crm.every(r => r.user_id === 'u-hugo'), 'the computer sends its data to the account (' + portal.crm.length + ' records)');
+  ok(/Synchronisé sur tes appareils/.test(await page.locator('#syncst').innerText()), 'the status line says the devices are in sync');
+  const phoneCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: SHOTS ? 2 : 1, colorScheme: 'dark', isMobile: true, hasTouch: true });
+  const phone = await phoneCtx.newPage(); phone.on('pageerror', e => errors.push('phone: ' + e.message));
+  await phone.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); await phone.route('https://togzyxnopontjwjkxcod.supabase.co/**', portalRoute);
+  await phone.goto(base); await phone.waitForSelector('.hero');
+  ok(await phone.evaluate(() => AOS.S.students.length === 0) && await phone.locator('.tabbar button').count() === 5, 'the phone starts empty and shows its tab bar');
+  await phone.locator('.tabbar [data-a="menu"]').click(); await phone.locator('.syncbtn').click(); await phone.waitForSelector('#accountLogin');
+  await phone.fill('#ac-email', 'hugo@example.com'); await phone.fill('#ac-pass', 'bon-mot-de-passe'); await phone.locator('#accountLogin .btn.pri').click();
+  await phone.waitForFunction(() => AOS.S.students.length === 1 && AOS.sync.pending() === 0 && !AOS.sync.busy);
+  ok(await phone.evaluate(() => AOS.S.students[0].name === 'Camille Test' && AOS.S.calls.length === 3 && AOS.S.goals.length === 1), 'after signing in, the phone has the data of the computer');
+  await phone.locator('[data-a="accountclose"]').click();
+  await phone.evaluate(() => AOS.save('tasks', { title: 'Noté depuis le téléphone', status: 'À faire', priority: 'Normale', due: AOS.today() }));
+  await phone.waitForFunction(() => AOS.sync.pending() === 0 && !AOS.sync.busy);
+  await page.evaluate(() => AOS.sync.now()); await page.waitForFunction(() => AOS.S.tasks.some(t => t.title === 'Noté depuis le téléphone'));
+  ok(/Noté depuis le téléphone/.test(await page.locator('#view').innerText()), 'a task added on the phone appears on the computer');
+  await page.evaluate(() => AOS.remove('tasks', AOS.S.tasks.find(t => t.title === 'Noté depuis le téléphone').id));
+  await page.waitForFunction(() => AOS.sync.pending() === 0 && !AOS.sync.busy);
+  await phone.evaluate(() => AOS.sync.now());
+  ok(await phone.evaluate(() => !AOS.S.tasks.some(t => t.title === 'Noté depuis le téléphone')), 'a task deleted on the computer disappears from the phone');
+  await phone.evaluate(() => { location.hash = 'dashboard'; window.scrollTo(0, 0); }); await phone.waitForTimeout(150);
+  ok(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal scroll on the phone dashboard');
+  if (SHOTS) await phone.screenshot({ path: path.join(SHOTS, '10-telephone.png') });
+  await phoneCtx.close();
+
   /* something new arrives in the portal: it shows up without touching anything */
   await page.waitForFunction(() => !AOS.portalLink.busy && AOS.portalLink.state === 'on');
   portal.requests.push({ id: '55555555-5555-4555-8555-555555555555', title: 'Nouvelle vidéo reçue', status: 'submitted', platform: 'tiktok', deadline: null, creator_id: 'c-jade', created_by: 'u-hugo', created_at: dAgo(1), updated_at: dAgo(0), submitted_at: dAgo(0), approved_at: null });

@@ -65,6 +65,7 @@
     let ok = 0, failed = 0, error = null;
     if (!DB) {
       ops.forEach(localApply); ok = ops.length; saveLocal(); emit();
+      if (AOS.syncEnqueue && !opts.remote) AOS.syncEnqueue(ops);   // also sent to the person's other devices
     } else {
       for (const o of ops) {
         const p = pathOf(o);
@@ -141,6 +142,8 @@
     emit();
   }
   Object.assign(AOS, { save, remove, setDoc, savePrefs, applyOps });
+  /* changes that arrive from another device of the same person: applied here, not sent back */
+  AOS.applyRemote = ops => { if (!DB) { ops.forEach(localApply); saveLocal(); emit(); } };
 
   /* ---------- private per-person documents (data/users/{uid}/{name}) ----------
      Only the person can read or write them (server rule). Used by Ma journée and Notifications. */

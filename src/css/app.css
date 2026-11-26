@@ -937,3 +937,19 @@ h1{font-size:clamp(30px,3.6vw,44px);font-weight:700;letter-spacing:-.04em}
 .box .box-h .chips{margin-left:auto}
 a.line>svg{color:var(--faint);flex:none}
 .hint svg{vertical-align:-2px}
+
+/* sync status button, account window, phone tab bar */
+.syncbtn{display:flex;align-items:center;gap:8px;border:0;background:none;padding:4px 0;color:inherit;font:inherit;text-align:left;min-width:0;width:100%;cursor:pointer}
+.syncbtn:hover{color:var(--fg)}
+#accountBody .brief{padding-bottom:16px}
+#accountLogin .input{width:100%}
+.tabbar{display:none}
+@media (max-width:900px){
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;justify-content:space-around;align-items:center;gap:2px;padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));
+    background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+  .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--faint);font-size:10.5px;font-weight:600;padding:6px 2px;min-height:48px;border-radius:12px}
+  .tabbar button.on{color:var(--fg)}
+  .tabbar button.plus{flex:none;width:50px;height:50px;min-height:50px;border-radius:50%;background:var(--accent);color:var(--accent-ink);justify-content:center}
+  .main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  #toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}

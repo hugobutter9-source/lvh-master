@@ -69,13 +69,49 @@
   AOS.renderStatus = function () {
     const el = $('#syncst'); if (!el) return;
     let c = 'ok', t = 'Synchronisé';
-    if (status.mode === 'local') { c = 'warn'; t = 'Enregistré sur cet appareil uniquement'; }
+    const Y = AOS.sync, L = AOS.portalLink;
+    if (status.mode === 'local' && Y && Y.on()) { const n = Y.pending();
+      if (Y.busy) { c = 'info'; t = 'Synchronisation…'; }
+      else if (Y.error === 'offline') { c = 'warn'; t = n ? `Hors ligne · ${n} modification${n > 1 ? 's' : ''} en attente` : 'Hors ligne · tout est enregistré ici'; }
+      else if (Y.error) { c = 'bad'; t = 'Synchronisation en échec, nouvel essai…'; }
+      else { c = 'ok'; t = n ? 'Envoi en cours…' : 'Synchronisé sur tes appareils'; } }
+    else if (status.mode === 'local' && Y && Y.pendingOther) { c = 'warn'; t = 'Synchronisation à confirmer'; }
+    else if (status.mode === 'local' && L && L.me && Y && !Y.wanted()) { c = 'warn'; t = 'Synchronisation en pause'; }
+    else if (status.mode === 'local') { c = 'warn'; t = 'Enregistré sur cet appareil uniquement'; }
     else if (status.mode === 'starting' || !status.loaded) { c = 'faint'; t = 'Chargement…'; }
     else if (status.error) { c = 'bad'; t = status.error; }
     else if (status.pending) { c = 'info'; t = 'Enregistrement…'; }
     else if (status.fromCache) { c = 'warn'; t = 'Connexion au serveur…'; }
-    el.innerHTML = `${AOS.dot(AOS.col(c))}<span class="lbl-t">${esc(t)}</span>`;
+    el.innerHTML = status.mode === 'local' ? `<button class="syncbtn" data-a="account" title="Compte et synchronisation">${AOS.dot(AOS.col(c))}<span class="lbl-t">${esc(t)}</span></button>` : `${AOS.dot(AOS.col(c))}<span class="lbl-t">${esc(t)}</span>`;
+    const acc = document.getElementById('accountBody'); if (acc && AOS.accountHtml && !acc.querySelector('#accountLogin:focus-within')) acc.innerHTML = AOS.accountHtml();
   };
+
+  /* ---------- account window: one sign-in for the portal link and for the sync between devices ---------- */
+  AOS.accountHtml = function () {
+    const Y = AOS.sync, L = AOS.portalLink, ok = AOS.portalClient && AOS.portalClient();
+    if (!ok) return `<div class="brief"><p class="muted">La synchronisation n'est pas disponible dans cet aperçu. Elle fonctionne sur l'application en ligne.</p></div>`;
+    if (!L || !L.me) return `<div class="brief"><p class="muted" style="margin:0">Connecte-toi avec ton compte du Creator Portal (compte manager). Tes tâches, objectifs, agenda et finances se retrouveront sur tous tes appareils, et tu verras les demandes du portal.</p>
+      <form id="accountLogin" class="stack tight" style="padding:0;display:flex"><input class="input" id="ac-email" name="email" type="email" autocomplete="username" placeholder="E-mail" required aria-label="E-mail"><input class="input" id="ac-pass" name="password" type="password" autocomplete="current-password" placeholder="Mot de passe" required aria-label="Mot de passe"><button class="btn pri" ${L && L.busy ? 'disabled' : ''}>${L && L.busy ? 'Connexion…' : 'Se connecter'}</button></form>
+      ${L && L.error ? `<p class="bad-t small" style="margin:0" role="alert">${esc(L.error)}</p>` : ''}
+      <p class="faint small" style="margin:0">Tes données sont enregistrées en ligne sous ton compte : toi seul peux les lire. Ton mot de passe n'est jamais gardé dans l'app.</p></div>`;
+    const n = Y.pending();
+    return `<div class="brief"><div class="brief-when">${ic('ok', 15)}<b>${esc(L.me.name)}</b><span class="muted">compte du Creator Portal</span></div>
+      ${Y.pendingOther ? `<div class="banner"><span>Cet appareil contient déjà des données enregistrées avec un autre compte. Les envoyer vers le compte <b>${esc(L.me.name)}</b> ?</span><button class="btn sm" data-a="syncadopt">Oui, synchroniser</button></div>`
+        : `<label class="inline"><input type="checkbox" data-a="syncwanted" ${Y.wanted() ? 'checked' : ''}><span>Synchroniser mes données entre mes appareils</span></label>
+        <p class="muted small" style="margin:0">${!Y.wanted() ? 'En pause : cet appareil garde ses données pour lui.' : Y.busy ? 'Synchronisation en cours…' : Y.error === 'offline' ? `Hors ligne. ${n ? n + ' modification' + (n > 1 ? 's' : '') + ' partiront au retour de la connexion.' : 'Rien en attente.'}` : Y.error ? 'Le serveur n\'a pas répondu. Nouvel essai automatique.' : Y.last ? `À jour. Dernière synchronisation à ${new Date(Y.last).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}.` : 'Première synchronisation…'}</p>
+        <p class="faint small" style="margin:0">Sur un autre appareil, ouvre l'app et connecte-toi avec ce même compte : tu y retrouves tout. L'apparence et les favoris restent propres à chaque appareil.</p>`}</div>
+      <div class="form-foot pad"><button class="btn ghost" data-a="portallogout">Se déconnecter</button>${Y.on() ? `<button class="btn" data-a="syncnow">Synchroniser maintenant</button>` : ''}</div>`;
+  };
+  Object.assign(AOS.act, {
+    account: () => {
+      if (!document.getElementById('accountBody')) document.getElementById('layer').insertAdjacentHTML('beforeend', `<div class="scrim" data-scrim="account"><div class="modal sm" role="dialog" aria-modal="true" aria-labelledby="accT"><div class="card-h"><h3 id="accT">Compte et synchronisation</h3><button class="btn sm ghost" data-a="accountclose" aria-label="Fermer">${ic('x')}</button></div><div id="accountBody"></div></div></div>`);
+      document.getElementById('accountBody').innerHTML = AOS.accountHtml();
+    },
+    accountclose: () => document.querySelector('#layer [data-scrim="account"]')?.remove(),
+    syncnow: async () => { await AOS.sync.now(); AOS.act.account(); },
+    syncadopt: () => { AOS.sync.adopt(); AOS.act.account(); },
+    syncwanted: el => { AOS.sync.setWanted(el.checked); AOS.act.account(); }
+  });
 
   /* ---------- page header ---------- */
   AOS.header = function ({ eyebrow, title, actions, key, bare }) {
@@ -111,6 +147,9 @@
     const drafts = {};
     document.querySelectorAll('#view input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), #view textarea').forEach(el => { const k = keyOf(el); if (k && el.value !== el.defaultValue) drafts[k] = el.value; });
     renderSide();
+    const tb = document.getElementById('tabbar');
+    if (tb) { const tab = (k, i, l) => AOS.modOn(k) ? `<button class="${view === k ? 'on' : ''}" data-nav="${k}" aria-current="${view === k ? 'page' : 'false'}">${ic(i, 21)}<span>${l}</span></button>` : '';
+      tb.innerHTML = tab('dashboard', 'home', 'Accueil') + tab('taches', 'task', 'Tâches') + (quick().length ? `<button class="plus" data-a="quicknew" aria-label="Ajouter">${ic('plus', 22)}</button>` : '') + tab('portal', 'film', 'Portal') + `<button data-a="menu" aria-label="Menu">${ic('menu', 21)}<span>Menu</span></button>`; }
     const p = AOS.navItem(view);
     let html;
     if (!status.loaded) html = AOS.header({ eyebrow: 'Chargement…', title: 'Ouverture de ton espace…' });

@@ -64,19 +64,22 @@
       PL.data = { people: people.data, requests: reqs.data, media: media.data };
       PL.at = Date.now(); PL.state = 'on'; PL.error = '';
       writeCache({ me: PL.me, data: PL.data, at: PL.at });
+      if (AOS.syncKick) AOS.syncKick();
     } catch (e) { PL.error = fail(e); if (!PL.data) PL.state = 'error'; }
     finally { PL.busy = false; AOS.render(); }
   }
   AOS.portalRefresh = load;
+  AOS.portalClient = client;
   /* called by the views: shows what is cached at once, refreshes in the background when it is old */
   function touch() {
     if (PL.state === 'off' && !PL.data && !PL.booted) {
       PL.booted = true; const c = readCache();
-      if (c && c.data) { PL.me = c.me; PL.data = c.data; PL.at = c.at || 0; PL.state = 'on'; }
+      if (c && c.data) { PL.me = c.me; PL.data = c.data; PL.at = c.at || 0; PL.state = 'on'; if (AOS.syncKick) setTimeout(AOS.syncKick, 0); }
       if (client()) setTimeout(load, 0);
     } else if (PL.state !== 'off' && Date.now() - Math.max(PL.at, PL.tried || 0) > STALE && !PL.busy && navigator.onLine !== false) setTimeout(load, 0);
   }
 
+  AOS.portalTouch = touch;
   /* keep the figures fresh while the dashboard or the portal page is on screen, and when coming back to the app */
   const onScreen = () => document.visibilityState === 'visible' && ['dashboard', 'portal'].includes(AOS.currentView ? AOS.currentView() : '');
   setInterval(() => { if (onScreen()) touch(); }, 20000);
@@ -147,18 +150,22 @@
   Object.assign(AOS.act, {
     portalrefresh: () => { if (!PL.busy) { load(); AOS.render(); } },
     portalwho: el => { PL.who = el.dataset.v; AOS.render(); },
-    portallogout: async () => { const c = client(); try { if (c) await c.auth.signOut(); } catch (e) { } PL.state = 'off'; PL.me = PL.data = null; PL.error = ''; writeCache(null); AOS.render(); toast('Déconnecté du portal'); }
+    portallogout: async () => { const c = client(); try { if (c) await c.auth.signOut(); } catch (e) { } PL.state = 'off'; PL.me = PL.data = null; PL.error = ''; writeCache(null); if (AOS.syncStop) AOS.syncStop(); AOS.render(); toast('Déconnecté'); }
   });
-  document.addEventListener('submit', async e => {
-    const f = e.target; if (f.id !== 'portalLogin') return; e.preventDefault();
-    const c = client(); if (!c || PL.busy) return;
-    const email = f.email.value.trim(), password = f.password.value; if (!email || !password) return;
+  AOS.portalSignIn = async function (email, password) {
+    const c = client(); if (!c || PL.busy) return false;
     PL.busy = true; PL.error = ''; AOS.render();
     let res; try { res = await c.auth.signInWithPassword({ email, password }); } catch (err) { res = { error: err }; }
     PL.busy = false;
-    if (res.error) { PL.error = /invalid/i.test(res.error.message || '') ? 'E-mail ou mot de passe incorrect.' : fail(res.error); AOS.render(); return; }
+    if (res.error) { PL.error = /invalid/i.test(res.error.message || '') ? 'E-mail ou mot de passe incorrect.' : fail(res.error); AOS.render(); return false; }
     await load();
-    if (PL.state === 'on') toast('Portal relié');
+    return PL.state === 'on';
+  };
+  document.addEventListener('submit', async e => {
+    const f = e.target; if (f.id !== 'portalLogin' && f.id !== 'accountLogin') return; e.preventDefault();
+    const email = f.email.value.trim(), password = f.password.value; if (!email || !password) return;
+    if (await AOS.portalSignIn(email, password)) toast(f.id === 'accountLogin' ? 'Connecté : tes appareils se synchronisent' : 'Portal relié');
+    if (f.id === 'accountLogin' && AOS.act.account) AOS.act.account();
   });
   document.addEventListener('submit', async e => {
     const f = e.target; if (f.id !== 'portalUrlForm') return; e.preventDefault();
