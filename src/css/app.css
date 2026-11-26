@@ -33,6 +33,9 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+/* installed on a phone, the page runs under the status bar: the content starts below it */
+:root{--sat:env(safe-area-inset-top,0px)}
+html{padding-top:var(--sat)}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;
   background-image:radial-gradient(1000px 520px at 8% -10%,var(--glow),transparent 60%),radial-gradient(800px 500px at 100% 0%,var(--glow),transparent 55%);background-attachment:fixed}
@@ -708,8 +711,8 @@ label.btn{cursor:pointer}
   .side.open{transform:none;box-shadow:var(--shadow)}
   .app.mini .lbl-t,.app.mini .bt,.app.mini .navsec h6,.app.mini .nav .cnt,.app.mini .nav .ph{display:revert}
   .app.mini .nav{justify-content:flex-start;padding:7px 10px}
-  .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);margin:-22px 0 0;padding:12px 0;border-bottom:1px solid var(--line)}
-  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+  .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:var(--sat);z-index:30;background:var(--bg);margin:-22px 0 0;padding:12px 0;border-bottom:1px solid var(--line)}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:var(--sat);z-index:35;background:var(--bg)}
 }
 @media (max-width:620px){
   .g2,.g4,.form2{grid-template-columns:minmax(0,1fr)}

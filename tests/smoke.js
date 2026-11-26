@@ -240,6 +240,13 @@ const ok = (cond, label) => { n++; if (!cond) failed++; console.log((cond ? 'ok 
   ok(await phone.evaluate(() => !AOS.S.tasks.some(t => t.title === 'Noté depuis le téléphone')), 'a task deleted on the computer disappears from the phone');
   await phone.evaluate(() => { location.hash = 'dashboard'; window.scrollTo(0, 0); }); await phone.waitForTimeout(150);
   ok(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal scroll on the phone dashboard');
+  /* an installed phone app runs under the status bar (59px on recent iPhones): nothing may hide behind the top bar */
+  await phone.evaluate(() => { document.documentElement.style.setProperty('--sat', '59px'); window.scrollTo(0, 0); }); await phone.waitForTimeout(100);
+  const geo = await phone.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { bar: r('.topbar'), hi: r('.wc-hi') }; });
+  ok(geo.bar.top >= 59 && geo.hi.top >= geo.bar.bottom, 'under a status bar, the greeting starts below the top bar (bar ' + Math.round(geo.bar.top) + '–' + Math.round(geo.bar.bottom) + ', greeting from ' + Math.round(geo.hi.top) + ')');
+  await phone.evaluate(() => window.scrollTo(0, 300)); await phone.waitForTimeout(100);
+  ok(await phone.evaluate(() => Math.round(document.querySelector('.topbar').getBoundingClientRect().top) === 59), 'the top bar stays just under the status bar while scrolling');
+  await phone.evaluate(() => window.scrollTo(0, 0));
   if (SHOTS) await phone.screenshot({ path: path.join(SHOTS, '10-telephone.png') });
   await phoneCtx.close();
 
